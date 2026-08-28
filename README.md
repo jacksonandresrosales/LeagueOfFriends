@@ -4,7 +4,7 @@ Plataforma para seguir el progreso de jugadores de League of Legends, compararlo
 
 ## Estado del proyecto
 
-El proyecto se encuentra en su etapa inicial. La estructura separa las áreas principales antes de añadir framework, estilos o integraciones externas.
+El frontend inicial incluye el dashboard y la creación de retos con datos de demostración. El modelo relacional está documentado antes de configurar la base de datos o conectar integraciones externas.
 
 ## Estructura
 
@@ -23,3 +23,10 @@ src/styles/               Estilos y variables visuales
 src/types/                Tipos compartidos
 tests/                    Pruebas automatizadas
 ```
+
+## Documentación
+
+- [`PRODUCT.md`](PRODUCT.md): visión y principios del producto.
+- [`DESIGN.md`](DESIGN.md): sistema visual aprobado.
+- [`docs/architecture.md`](docs/architecture.md): separación inicial de responsabilidades.
+- [`docs/data-model.md`](docs/data-model.md): entidades, relaciones, acceso y sincronización.

@@ -8,4 +8,4 @@ La aplicación se divide por áreas del producto para que cada etapa pueda imple
 - `riot`: comunicación exclusiva desde el servidor con la API de Riot Games.
 - `notifications`: eventos internos y futuros avisos por correo.
 
-En esta etapa no se ha elegido ningún estilo visual ni se han conectado servicios externos.
+El sistema visual se encuentra definido en `DESIGN.md` y el modelo relacional previsto está documentado en `docs/data-model.md`. La aplicación todavía utiliza datos de demostración y no se han conectado servicios externos.
