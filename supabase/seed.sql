@@ -1,0 +1,1 @@
+-- Los datos de demostración se añadirán cuando exista autenticación local.
