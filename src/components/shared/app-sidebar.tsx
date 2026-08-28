@@ -1,0 +1,35 @@
+import { ChartLineUp, GearSix, House, Plus, SignOut, Sword, Trophy, UsersThree } from '@phosphor-icons/react/dist/ssr';
+import Link from 'next/link';
+
+type NavigationItem = 'Resumen' | 'Comparar' | 'Amigos' | 'Retos' | 'Clasificación';
+
+const navItems = [
+  { label: 'Resumen' as const, icon: House, href: '/' },
+  { label: 'Comparar' as const, icon: ChartLineUp, href: '/#comparar' },
+  { label: 'Amigos' as const, icon: UsersThree, href: '/#amigos' },
+  { label: 'Retos' as const, icon: Sword, href: '/retos/nuevo' },
+  { label: 'Clasificación' as const, icon: Trophy, href: '/#clasificacion' },
+];
+
+export function AppSidebar({ active }: { active: NavigationItem }) {
+  return (
+    <aside className="sidebar">
+      <Link className="brand" href="/" aria-label="LeagueOfFriends, inicio">
+        <span className="brand-mark">LF</span>
+        <span className="brand-name">LEAGUE<br />OF FRIENDS</span>
+      </Link>
+      <nav className="main-nav" aria-label="Navegación principal">
+        {navItems.map(({ label, icon: Icon, href }) => (
+          <Link key={label} href={href} className={active === label ? 'nav-link is-active' : 'nav-link'}>
+            <Icon size={21} weight={active === label ? 'fill' : 'bold'} /><span>{label}</span>
+          </Link>
+        ))}
+      </nav>
+      <Link className="create-button" href="/retos/nuevo"><Plus size={20} weight="bold" /><span>Crear reto</span></Link>
+      <div className="sidebar-footer">
+        <a className="nav-link" href="#ajustes"><GearSix size={21} weight="bold" /><span>Ajustes</span></a>
+        <button className="nav-link sign-out" type="button"><SignOut size={21} weight="bold" /><span>Salir</span></button>
+      </div>
+    </aside>
+  );
+}

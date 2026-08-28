@@ -1,10 +1,11 @@
 'use client';
 
 import {
-  Bell, ChartLineUp, Check, Crosshair, GearSix, House, Moon, Plus,
-  ShieldChevron, SignOut, Sword, Sun, Trophy, UsersThree,
+  Bell, Check, Crosshair, ShieldChevron, Trophy,
 } from '@phosphor-icons/react';
-import { useState, useSyncExternalStore } from 'react';
+import { useState } from 'react';
+import { AppSidebar } from '@/components/shared/app-sidebar';
+import { ThemeToggle } from '@/components/shared/theme-toggle';
 
 type Period = 'Día' | 'Semana' | 'Mes';
 const periods: Period[] = ['Día', 'Semana', 'Mes'];
@@ -26,67 +27,12 @@ const periodData: Record<Period, { lp: string; games: string; wins: string; rate
   },
 };
 
-const navItems = [
-  { label: 'Resumen', icon: House, active: true },
-  { label: 'Comparar', icon: ChartLineUp },
-  { label: 'Amigos', icon: UsersThree },
-  { label: 'Retos', icon: Sword },
-  { label: 'Clasificación', icon: Trophy },
-];
-
 const friends = [
   { place: '01', name: 'Andre', tag: '#LAN', lp: '+138', tone: 'red' },
   { place: '02', name: 'Kuro', tag: '#EUW', lp: '+112', tone: 'dark' },
   { place: '03', name: 'Maya', tag: '#LAS', lp: '+84', tone: 'light' },
   { place: '04', name: 'Nox', tag: '#LAN', lp: '+61', tone: 'muted' },
 ];
-
-function ThemeToggle() {
-  const isDark = useSyncExternalStore(
-    (onChange) => {
-      window.addEventListener('lof-theme-change', onChange);
-      return () => window.removeEventListener('lof-theme-change', onChange);
-    },
-    () => document.documentElement.dataset.theme === 'dark',
-    () => false,
-  );
-
-  function toggleTheme() {
-    const next = isDark ? 'light' : 'dark';
-    document.documentElement.dataset.theme = next;
-    localStorage.setItem('lof-theme', next);
-    window.dispatchEvent(new Event('lof-theme-change'));
-  }
-
-  return (
-    <button className="icon-button" type="button" onClick={toggleTheme} aria-label={`Activar modo ${isDark ? 'claro' : 'oscuro'}`}>
-      {isDark ? <Sun size={20} weight="bold" /> : <Moon size={20} weight="bold" />}
-    </button>
-  );
-}
-
-function Sidebar() {
-  return (
-    <aside className="sidebar">
-      <a className="brand" href="#inicio" aria-label="LeagueOfFriends, inicio">
-        <span className="brand-mark">LF</span>
-        <span className="brand-name">LEAGUE<br />OF FRIENDS</span>
-      </a>
-      <nav className="main-nav" aria-label="Navegación principal">
-        {navItems.map(({ label, icon: Icon, active }) => (
-          <a key={label} href={`#${label.toLowerCase()}`} className={active ? 'nav-link is-active' : 'nav-link'}>
-            <Icon size={21} weight={active ? 'fill' : 'bold'} /><span>{label}</span>
-          </a>
-        ))}
-      </nav>
-      <button className="create-button" type="button"><Plus size={20} weight="bold" /><span>Crear reto</span></button>
-      <div className="sidebar-footer">
-        <a className="nav-link" href="#ajustes"><GearSix size={21} weight="bold" /><span>Ajustes</span></a>
-        <button className="nav-link sign-out" type="button"><SignOut size={21} weight="bold" /><span>Salir</span></button>
-      </div>
-    </aside>
-  );
-}
 
 function PerformanceChart({ period }: { period: Period }) {
   const data = periodData[period];
@@ -113,7 +59,7 @@ export function Dashboard() {
 
   return (
     <div className="app-shell" id="inicio">
-      <Sidebar />
+      <AppSidebar active="Resumen" />
       <main className="dashboard-main">
         <header className="topbar">
           <div><p className="eyebrow">Panel personal / Temporada 2026</p><h1>Tu rendimiento</h1></div>
