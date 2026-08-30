@@ -458,7 +458,7 @@ export function LeaderboardView() {
                       #2 Segundo Lugar
                     </strong>
                   </div>
-                  <span style={{ font: '800 11px/1 var(--font-mono)', background: 'var(--line)', color: 'var(--surface)', padding: '2px 6px' }}>
+                  <span style={{ font: '800 11px/1 var(--font-mono)', background: 'rgba(0, 0, 0, 0.4)', color: '#ffffff', border: '1px solid rgba(255, 255, 255, 0.3)', padding: '3px 8px' }}>
                     {top3[1]?.tagLine.replace('#', '')}
                   </span>
                 </div>
@@ -642,7 +642,7 @@ export function LeaderboardView() {
                       #3 Tercer Lugar
                     </strong>
                   </div>
-                  <span style={{ font: '800 11px/1 var(--font-mono)', background: 'var(--line)', color: 'var(--surface)', padding: '2px 6px' }}>
+                  <span style={{ font: '800 11px/1 var(--font-mono)', background: 'rgba(0, 0, 0, 0.4)', color: '#ffffff', border: '1px solid rgba(255, 255, 255, 0.3)', padding: '3px 8px' }}>
                     {top3[2]?.tagLine.replace('#', '')}
                   </span>
                 </div>
@@ -861,9 +861,9 @@ export function LeaderboardView() {
                               : isTop2
                                 ? 'var(--surface-alt)'
                                 : isTop3
-                                  ? 'var(--ink)'
+                                  ? 'var(--surface)'
                                   : 'var(--surface)',
-                            color: isTop1 || isTop3 ? 'var(--on-accent)' : 'var(--ink)',
+                            color: isTop1 ? 'var(--on-accent)' : 'var(--ink)',
                             font: '900 13px/1 var(--font-display)',
                             boxShadow: '2px 2px 0 var(--line)',
                           }}
@@ -1031,9 +1031,10 @@ export function LeaderboardView() {
                 style={{
                   width: '36px',
                   height: '36px',
-                  background: 'var(--line)',
-                  color: 'var(--on-accent)',
-                  border: '2px solid var(--on-accent)',
+                  background: 'rgba(0, 0, 0, 0.45)',
+                  color: '#ffffff',
+                  border: '2px solid rgba(255, 255, 255, 0.7)',
+                  boxShadow: '2px 2px 0 rgba(0, 0, 0, 0.5)',
                   display: 'grid',
                   placeItems: 'center',
                   font: '900 16px/1 var(--font-display)',
