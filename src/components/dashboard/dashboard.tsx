@@ -355,9 +355,9 @@ export function Dashboard() {
 
           <section className="panel challenge-panel" aria-labelledby="challenge-title">
             <div className="challenge-symbol"><Crosshair size={42} weight="bold" /></div>
-            <div className="challenge-info"><p className="eyebrow">Reto activo / 12 días restantes</p><h2 id="challenge-title">Road to Emerald</h2><p>El primero en alcanzar Esmeralda IV gana. Cuatro amigos, una sola meta.</p></div>
-            <div className="challenge-progress"><div><span>Tu progreso</span><strong>{lp > 0 ? `${lp} LP` : '0%'}</strong></div><div className="progress-track large"><span style={{ width: `${Math.min(100, Math.max(5, lp))}%` }} /></div><small><Check size={15} weight="bold" /> {lp} LP acumulados</small></div>
-            <Link href="/retos" className="secondary-button">Ver reto</Link>
+            <div className="challenge-info"><p className="eyebrow">Reto activo / 18 días restantes</p><h2 id="challenge-title">Carrera a Esmeralda IV</h2><p>El primero en alcanzar Esmeralda IV gana. Tú vs Kuro, una sola meta.</p></div>
+            <div className="challenge-progress"><div><span>Tu progreso</span><strong>61 / 100 LP</strong></div><div className="progress-track large"><span style={{ width: '61%' }} /></div><small><Check size={15} weight="bold" /> 61% completado · 18 días restantes</small></div>
+            <Link href="/retos?challengeId=ch-1" className="secondary-button">Ver reto</Link>
           </section>
         </div>
       </main>

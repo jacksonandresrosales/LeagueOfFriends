@@ -15,6 +15,7 @@ import {
 } from '@phosphor-icons/react';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { AppSidebar } from '@/components/shared/app-sidebar';
 import { NotificationBell } from '@/components/shared/notification-bell';
 import { ThemeToggle } from '@/components/shared/theme-toggle';
@@ -196,9 +197,31 @@ const mockChallenges: ChallengeItem[] = [
 ];
 
 export function ChallengesListView() {
-  const [activeTab, setActiveTab] = useState<TabType>('active');
+  const searchParams = useSearchParams();
+  const targetId = searchParams.get('challengeId');
+
+  const [activeTab, setActiveTab] = useState<TabType>(() => {
+    if (!targetId) return 'active';
+    const match = mockChallenges.find((c) => c.id === targetId);
+    if (match?.status === 'completed') return 'history';
+    if (match?.status === 'pending_acceptance') return 'pending';
+    return 'active';
+  });
+
   const [challenges, setChallenges] = useState<ChallengeItem[]>(mockChallenges);
   const [actionNotice, setActionNotice] = useState('');
+
+  useEffect(() => {
+    if (targetId) {
+      const timer = setTimeout(() => {
+        const el = document.getElementById(`challenge-${targetId}`);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 150);
+      return () => clearTimeout(timer);
+    }
+  }, [targetId]);
 
   useEffect(() => {
     async function loadData() {
@@ -363,11 +386,16 @@ export function ChallengesListView() {
               return (
                 <article
                   key={ch.id}
+                  id={`challenge-${ch.id}`}
                   className="panel"
                   style={{
                     overflow: 'hidden',
                     display: 'flex',
                     flexDirection: 'column',
+                    outline: ch.id === targetId ? '4px solid var(--accent-bright)' : undefined,
+                    outlineOffset: ch.id === targetId ? '4px' : undefined,
+                    boxShadow: ch.id === targetId ? '8px 8px 0 var(--line)' : undefined,
+                    transition: 'all 240ms ease',
                   }}
                 >
                   {/* Cabecera del Reto */}
