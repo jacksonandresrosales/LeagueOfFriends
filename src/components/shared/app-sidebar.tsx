@@ -1,5 +1,9 @@
-import { ChartLineUp, GearSix, House, Plus, SignOut, Sword, Trophy, UsersThree } from '@phosphor-icons/react/dist/ssr';
+'use client';
+
+import { ChartLineUp, GearSix, House, Plus, SignOut, Sword, Trophy, UsersThree } from '@phosphor-icons/react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { getSupabaseClient } from '@/lib/supabase/client';
 
 type NavigationItem = 'Resumen' | 'Comparar' | 'Amigos' | 'Retos' | 'Clasificación';
 
@@ -12,6 +16,13 @@ const navItems = [
 ];
 
 export function AppSidebar({ active }: { active: NavigationItem }) {
+  const router = useRouter();
+
+  async function handleSignOut() {
+    await getSupabaseClient().auth.signOut({ scope: 'local' });
+    router.replace('/login');
+  }
+
   return (
     <aside className="sidebar">
       <Link className="brand" href="/" aria-label="LeagueOfFriends, inicio">
@@ -28,7 +39,7 @@ export function AppSidebar({ active }: { active: NavigationItem }) {
       <Link className="create-button" href="/retos/nuevo"><Plus size={20} weight="bold" /><span>Crear reto</span></Link>
       <div className="sidebar-footer">
         <a className="nav-link" href="#ajustes"><GearSix size={21} weight="bold" /><span>Ajustes</span></a>
-        <button className="nav-link sign-out" type="button"><SignOut size={21} weight="bold" /><span>Salir</span></button>
+        <button className="nav-link sign-out" type="button" onClick={handleSignOut}><SignOut size={21} weight="bold" /><span>Salir</span></button>
       </div>
     </aside>
   );

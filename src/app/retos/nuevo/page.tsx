@@ -1,3 +1,4 @@
+import { AuthGate } from '@/components/auth/auth-gate';
 import type { Metadata } from 'next';
 import { CreateChallenge } from '@/components/challenges/create-challenge';
 
@@ -7,5 +8,5 @@ export const metadata: Metadata = {
 };
 
 export default function NewChallengePage() {
-  return <CreateChallenge />;
+  return <AuthGate><CreateChallenge /></AuthGate>;
 }
