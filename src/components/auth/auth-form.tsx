@@ -1,43 +1,116 @@
 'use client';
 
-import { ArrowLeft, ArrowRight, EnvelopeSimple, LockKey, ShieldCheck, UserPlus } from '@phosphor-icons/react';
-import { FormEvent, useState } from 'react';
+import {
+  ArrowLeft,
+  ArrowRight,
+  Check,
+  EnvelopeSimple,
+  Key,
+  LockKey,
+  ShieldCheck,
+  UserPlus,
+} from '@phosphor-icons/react';
+import { FormEvent, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
 
 type Mode = 'sign-in' | 'sign-up' | 'reset';
-
-const copy: Record<Mode, { title: string; description: string; submit: string }> = {
-  'sign-in': {
-    title: 'Vuelve a la grieta',
-    description: 'Entra para seguir tus retos y comparar tu progreso.',
-    submit: 'Iniciar sesión',
-  },
-  'sign-up': {
-    title: 'Crea tu cuenta',
-    description: 'Prepara tu perfil antes de vincular tu cuenta de League.',
-    submit: 'Crear cuenta',
-  },
-  reset: {
-    title: 'Recupera el acceso',
-    description: 'Te enviaremos un enlace seguro para elegir una contraseña nueva.',
-    submit: 'Enviar enlace',
-  },
-};
+type ResetStep = 'email' | 'otp' | 'password' | 'success';
 
 export function AuthForm() {
   const router = useRouter();
   const [mode, setMode] = useState<Mode>('sign-in');
+  const [resetStep, setResetStep] = useState<ResetStep>('email');
+  const [recoveryEmail, setRecoveryEmail] = useState('');
+  const [otpDigits, setOtpDigits] = useState<string[]>(['', '', '', '', '', '']);
+  const otpInputRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  const [resendCooldown, setResendCooldown] = useState(0);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
+  // Temporizador para reenvío de OTP
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = setInterval(() => {
+      setResendCooldown((prev) => prev - 1);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [resendCooldown]);
+
   function changeMode(nextMode: Mode) {
     setMode(nextMode);
+    setResetStep('email');
+    setOtpDigits(['', '', '', '', '', '']);
     setMessage('');
     setError('');
   }
 
+  // Manejo de cambio en casillas de OTP
+  function handleOtpChange(index: number, value: string) {
+    const cleanVal = value.replace(/\D/g, '').slice(-1);
+    const newDigits = [...otpDigits];
+    newDigits[index] = cleanVal;
+    setOtpDigits(newDigits);
+
+    if (cleanVal && index < 5) {
+      otpInputRefs.current[index + 1]?.focus();
+    }
+  }
+
+  // Manejo de retroceso (Backspace) en casillas OTP
+  function handleOtpKeyDown(index: number, e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'Backspace' && !otpDigits[index] && index > 0) {
+      otpInputRefs.current[index - 1]?.focus();
+    }
+  }
+
+  // Manejo de pegar código completo de 6 dígitos
+  function handleOtpPaste(e: React.ClipboardEvent<HTMLInputElement>) {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+    if (!pasted) return;
+
+    const newDigits = [...otpDigits];
+    for (let i = 0; i < 6; i++) {
+      newDigits[i] = pasted[i] || '';
+    }
+    setOtpDigits(newDigits);
+
+    const nextFocusIndex = Math.min(pasted.length, 5);
+    otpInputRefs.current[nextFocusIndex]?.focus();
+  }
+
+  // Reenviar código OTP
+  async function handleResendCode() {
+    if (resendCooldown > 0 || !recoveryEmail) return;
+    setSubmitting(true);
+    setError('');
+    setMessage('');
+
+    try {
+      const res = await fetch('/api/auth/send-recovery-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: recoveryEmail }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || 'Error al reenviar el código.');
+      } else {
+        setMessage('Hemos reenviado un nuevo código a tu correo.');
+        setResendCooldown(60);
+      }
+    } catch {
+      setError('Error al contactar con el servicio de correo.');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  // Submit principal
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setMessage('');
@@ -53,30 +126,114 @@ export function AuthForm() {
     const password = String(formData.get('password') ?? '');
     const confirmation = String(formData.get('confirmation') ?? '');
 
-    if (mode === 'sign-up' && password !== confirmation) {
-      setError('Las contraseñas no coinciden.');
-      return;
-    }
-
     setSubmitting(true);
     const supabase = getSupabaseClient();
 
     try {
+      // 1. FLUJO DE RECUPERACIÓN DE CONTRASEÑA CON OTP Y RESEND
       if (mode === 'reset') {
-        const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: `${window.location.origin}/actualizar-contrasena`,
-        });
-        if (resetError) throw resetError;
-        setMessage('Si el correo está registrado, recibirás un enlace para restablecer tu contraseña.');
-        return;
+        // Paso 1: Enviar código al correo
+        if (resetStep === 'email') {
+          if (!email) {
+            setError('Ingresa tu correo electrónico.');
+            setSubmitting(false);
+            return;
+          }
+
+          const res = await fetch('/api/auth/send-recovery-code', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email }),
+          });
+
+          const data = await res.json();
+
+          if (!res.ok) {
+            setError(data.error || 'Error al enviar el código de verificación.');
+            setSubmitting(false);
+            return;
+          }
+
+          setRecoveryEmail(email);
+          setResetStep('otp');
+          setResendCooldown(60);
+          setMessage(`Código de verificación enviado a ${email}.`);
+          setSubmitting(false);
+          return;
+        }
+
+        // Paso 2: Verificar código OTP de 6 dígitos
+        if (resetStep === 'otp') {
+          const otpCode = otpDigits.join('');
+          if (otpCode.length < 6) {
+            setError('Ingresa los 6 dígitos del código de verificación.');
+            setSubmitting(false);
+            return;
+          }
+
+          const { error: otpError } = await supabase.auth.verifyOtp({
+            email: recoveryEmail,
+            token: otpCode,
+            type: 'recovery',
+          });
+
+          if (otpError) {
+            setError('El código ingresado es incorrecto o ya expiró.');
+            setSubmitting(false);
+            return;
+          }
+
+          setResetStep('password');
+          setMessage('Código verificado con éxito. Ahora elige tu nueva contraseña.');
+          setSubmitting(false);
+          return;
+        }
+
+        // Paso 3: Establecer nueva contraseña
+        if (resetStep === 'password') {
+          if (!password || password.length < 6) {
+            setError('La contraseña debe tener al menos 6 caracteres.');
+            setSubmitting(false);
+            return;
+          }
+
+          if (password !== confirmation) {
+            setError('Las contraseñas no coinciden.');
+            setSubmitting(false);
+            return;
+          }
+
+          const { error: updateError } = await supabase.auth.updateUser({
+            password,
+          });
+
+          if (updateError) {
+            setError('No se pudo actualizar la contraseña. Intenta nuevamente.');
+            setSubmitting(false);
+            return;
+          }
+
+          setResetStep('success');
+          setMessage('¡Tu contraseña ha sido actualizada exitosamente!');
+          setSubmitting(false);
+          return;
+        }
       }
 
+      // 2. REGISTRO
       if (mode === 'sign-up') {
+        if (password !== confirmation) {
+          setError('Las contraseñas no coinciden.');
+          setSubmitting(false);
+          return;
+        }
+
         const { data, error: signUpError } = await supabase.auth.signUp({
           email,
           password,
           options: { emailRedirectTo: window.location.origin },
         });
+
         if (signUpError) throw signUpError;
 
         if (data.session) {
@@ -87,6 +244,7 @@ export function AuthForm() {
         return;
       }
 
+      // 3. INICIO DE SESIÓN
       const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
       if (signInError) {
         setError('No pudimos iniciar sesión. Revisa tus datos o restablece tu contraseña.');
@@ -101,62 +259,277 @@ export function AuthForm() {
     }
   }
 
-  const current = copy[mode];
-  const isReset = mode === 'reset';
-
   return (
-    <main className="auth-page">
-      <section className="auth-brand-panel" aria-label="LeagueOfFriends">
-        <a className="brand" href="/login" aria-label="LeagueOfFriends, acceso">
-          <span className="brand-mark">LF</span>
-          <span className="brand-name">LEAGUE<br />OF FRIENDS</span>
-        </a>
-        <div className="auth-brand-copy">
-          <p className="eyebrow">Tu círculo, tu progreso</p>
-          <h1>COMPITE CON AMIGOS.<br />MEJORA CADA PARTIDA.</h1>
-          <p>Retos, estadísticas y alertas para que la siguiente victoria cuente.</p>
+    <div className="auth-form-wrap">
+      {mode === 'reset' && resetStep === 'otp' ? (
+        <>
+          <h2>Verifica el código</h2>
+          <p className="auth-description">
+            Ingresa el código de 6 dígitos que enviamos a <strong>{recoveryEmail}</strong>.
+          </p>
+        </>
+      ) : mode === 'reset' && resetStep === 'password' ? (
+        <>
+          <h2>Nueva contraseña</h2>
+          <p className="auth-description">
+            Crea una nueva contraseña segura para tu cuenta.
+          </p>
+        </>
+      ) : mode === 'reset' && resetStep === 'success' ? (
+        <>
+          <h2>¡Todo listo!</h2>
+          <p className="auth-description">
+            Tu contraseña ha sido actualizada exitosamente. Ya puedes iniciar sesión con tus nuevas credenciales.
+          </p>
+        </>
+      ) : mode === 'reset' ? (
+        <>
+          <h2>Recupera el acceso</h2>
+          <p className="auth-description">
+            Ingresa tu correo y te enviaremos un código de verificación de 6 dígitos mediante Resend.
+          </p>
+        </>
+      ) : mode === 'sign-up' ? (
+        <>
+          <h2>Crea tu cuenta</h2>
+          <p className="auth-description">
+            Prepara tu perfil antes de vincular tu cuenta de League of Legends.
+          </p>
+        </>
+      ) : (
+        <>
+          <h2>Vuelve a la grieta</h2>
+          <p className="auth-description">
+            Entra para seguir tus retos y comparar tu progreso competitivo.
+          </p>
+        </>
+      )}
+
+      {message ? (
+        <div className="auth-feedback" role="status">
+          <ShieldCheck size={16} weight="bold" />
+          <span>{message}</span>
         </div>
-        <div className="auth-security-note"><ShieldCheck size={23} weight="bold" /><span>Tu contraseña no se guarda en LeagueOfFriends.</span></div>
-      </section>
+      ) : null}
 
-      <section className="auth-form-panel" aria-labelledby="auth-title">
-        <div className="auth-form-wrap">
-          {mode !== 'sign-in' ? <button className="auth-back" type="button" onClick={() => changeMode('sign-in')}><ArrowLeft size={17} weight="bold" /> Volver al acceso</button> : null}
-          <p className="eyebrow">Acceso seguro</p>
-          <h2 id="auth-title">{current.title}</h2>
-          <p className="auth-description">{current.description}</p>
+      {error ? (
+        <div className="auth-feedback is-error" role="alert">
+          <ShieldCheck size={16} weight="bold" />
+          <span>{error}</span>
+        </div>
+      ) : null}
 
-          <form className="auth-form" onSubmit={handleSubmit} noValidate>
-            <label className="field-group">
-              <span className="field-label">Correo electrónico</span>
-              <span className="auth-input"><EnvelopeSimple size={20} weight="bold" /><input name="email" type="email" autoComplete="email" inputMode="email" required maxLength={254} placeholder="tu@email.com" /></span>
-            </label>
+      {mode === 'reset' && resetStep === 'success' ? (
+        <div style={{ marginTop: '24px' }}>
+          <button
+            type="button"
+            className="auth-submit"
+            onClick={() => changeMode('sign-in')}
+          >
+            <span>Iniciar sesión</span>
+            <ArrowRight size={18} weight="bold" />
+          </button>
+        </div>
+      ) : (
+        <form className="auth-form" onSubmit={handleSubmit}>
+          {mode === 'reset' && resetStep === 'otp' ? (
+            <div className="field-group">
+              <label className="eyebrow" htmlFor="otp-0">
+                Código de 6 dígitos
+              </label>
+              <div className="otp-inputs">
+                {otpDigits.map((digit, idx) => (
+                  <input
+                    key={idx}
+                    id={`otp-${idx}`}
+                    ref={(el) => {
+                      otpInputRefs.current[idx] = el;
+                    }}
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={1}
+                    value={digit}
+                    onChange={(e) => handleOtpChange(idx, e.target.value)}
+                    onKeyDown={(e) => handleOtpKeyDown(idx, e)}
+                    onPaste={idx === 0 ? handleOtpPaste : undefined}
+                    className="otp-box"
+                    autoFocus={idx === 0}
+                  />
+                ))}
+              </div>
 
-            {!isReset ? <label className="field-group">
-              <span className="field-label">Contraseña</span>
-              <span className="auth-input"><LockKey size={20} weight="bold" /><input name="password" type="password" autoComplete={mode === 'sign-up' ? 'new-password' : 'current-password'} required minLength={8} maxLength={128} placeholder="Mínimo 8 caracteres" /></span>
-            </label> : null}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px' }}>
+                <button
+                  type="button"
+                  onClick={handleResendCode}
+                  disabled={resendCooldown > 0 || submitting}
+                  className="auth-inline-link"
+                  style={{ margin: 0, opacity: resendCooldown > 0 ? 0.6 : 1, cursor: resendCooldown > 0 ? 'default' : 'pointer' }}
+                >
+                  {resendCooldown > 0 ? `Reenviar código en ${resendCooldown}s` : 'Reenviar código'}
+                </button>
 
-            {mode === 'sign-up' ? <label className="field-group">
-              <span className="field-label">Confirmar contraseña</span>
-              <span className="auth-input"><LockKey size={20} weight="bold" /><input name="confirmation" type="password" autoComplete="new-password" required minLength={8} maxLength={128} placeholder="Repite tu contraseña" /></span>
-            </label> : null}
+                <button
+                  type="button"
+                  onClick={() => setResetStep('email')}
+                  className="auth-inline-link"
+                  style={{ margin: 0 }}
+                >
+                  Cambiar correo
+                </button>
+              </div>
+            </div>
+          ) : mode === 'reset' && resetStep === 'password' ? (
+            <>
+              <div className="field-group">
+                <label className="eyebrow" htmlFor="auth-password">
+                  Nueva contraseña
+                </label>
+                <div className="auth-input">
+                  <LockKey size={18} weight="bold" />
+                  <input
+                    id="auth-password"
+                    name="password"
+                    type="password"
+                    placeholder="Mínimo 6 caracteres"
+                    autoComplete="new-password"
+                    required
+                  />
+                </div>
+              </div>
 
-            {error ? <p className="auth-feedback is-error" role="alert">{error}</p> : null}
-            {message ? <p className="auth-feedback" role="status">{message}</p> : null}
+              <div className="field-group">
+                <label className="eyebrow" htmlFor="auth-confirmation">
+                  Confirmar nueva contraseña
+                </label>
+                <div className="auth-input">
+                  <Key size={18} weight="bold" />
+                  <input
+                    id="auth-confirmation"
+                    name="confirmation"
+                    type="password"
+                    placeholder="Repite la contraseña"
+                    autoComplete="new-password"
+                    required
+                  />
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="field-group">
+                <label className="eyebrow" htmlFor="auth-email">
+                  Correo electrónico
+                </label>
+                <div className="auth-input">
+                  <EnvelopeSimple size={18} weight="bold" />
+                  <input
+                    id="auth-email"
+                    name="email"
+                    type="email"
+                    placeholder="tu@correo.com"
+                    autoComplete="email"
+                    defaultValue={recoveryEmail}
+                    required
+                  />
+                </div>
+              </div>
 
-            <button className="auth-submit" type="submit" disabled={submitting}>
-              {mode === 'sign-up' ? <UserPlus size={20} weight="bold" /> : <ArrowRight size={20} weight="bold" />}
-              {submitting ? 'Procesando...' : current.submit}
+              {mode !== 'reset' ? (
+                <div className="field-group">
+                  <label className="eyebrow" htmlFor="auth-password">
+                    Contraseña
+                  </label>
+                  <div className="auth-input">
+                    <LockKey size={18} weight="bold" />
+                    <input
+                      id="auth-password"
+                      name="password"
+                      type="password"
+                      placeholder="Tu contraseña secreta"
+                      autoComplete={mode === 'sign-in' ? 'current-password' : 'new-password'}
+                      required
+                    />
+                  </div>
+                </div>
+              ) : null}
+
+              {mode === 'sign-up' ? (
+                <div className="field-group">
+                  <label className="eyebrow" htmlFor="auth-confirmation">
+                    Confirmar contraseña
+                  </label>
+                  <div className="auth-input">
+                    <LockKey size={18} weight="bold" />
+                    <input
+                      id="auth-confirmation"
+                      name="confirmation"
+                      type="password"
+                      placeholder="Repite la contraseña"
+                      autoComplete="new-password"
+                      required
+                    />
+                  </div>
+                </div>
+              ) : null}
+            </>
+          )}
+
+          <button className="auth-submit" type="submit" disabled={submitting}>
+            <span>
+              {submitting
+                ? 'Procesando...'
+                : mode === 'reset' && resetStep === 'otp'
+                  ? 'Verificar código'
+                  : mode === 'reset' && resetStep === 'password'
+                    ? 'Guardar contraseña'
+                    : mode === 'reset'
+                      ? 'Enviar código'
+                      : mode === 'sign-up'
+                        ? 'Crear cuenta'
+                        : 'Iniciar sesión'}
+            </span>
+            {mode === 'reset' && resetStep === 'password' ? (
+              <Check size={18} weight="bold" />
+            ) : mode === 'sign-up' ? (
+              <UserPlus size={18} weight="bold" />
+            ) : (
+              <ArrowRight size={18} weight="bold" />
+            )}
+          </button>
+        </form>
+      )}
+
+      <div className="auth-actions">
+        {mode === 'sign-in' ? (
+          <>
+            <p>
+              ¿No tienes cuenta todavía?{' '}
+              <button type="button" onClick={() => changeMode('sign-up')}>
+                Crear una cuenta
+              </button>
+            </p>
+            <p>
+              ¿Olvidaste tu contraseña?{' '}
+              <button type="button" onClick={() => changeMode('reset')}>
+                Recuperar acceso
+              </button>
+            </p>
+          </>
+        ) : mode === 'sign-up' ? (
+          <p>
+            ¿Ya tienes cuenta?{' '}
+            <button type="button" onClick={() => changeMode('sign-in')}>
+              Iniciar sesión
             </button>
-          </form>
-
-          {mode === 'sign-in' ? <div className="auth-actions">
-            <button type="button" onClick={() => changeMode('reset')}>¿Olvidaste tu contraseña?</button>
-            <p>¿Primera vez? <button type="button" onClick={() => changeMode('sign-up')}>Crea tu cuenta</button></p>
-          </div> : null}
-        </div>
-      </section>
-    </main>
+          </p>
+        ) : (
+          <button type="button" className="auth-back" onClick={() => changeMode('sign-in')}>
+            <ArrowLeft size={16} weight="bold" />
+            <span>Volver a iniciar sesión</span>
+          </button>
+        )}
+      </div>
+    </div>
   );
 }

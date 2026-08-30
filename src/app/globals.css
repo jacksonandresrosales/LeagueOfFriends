@@ -71,6 +71,13 @@ button:focus-visible, a:focus-visible { outline: 3px solid var(--accent-bright);
 .auth-submit:disabled { cursor: wait; opacity: .68; box-shadow: none; }
 .auth-feedback { min-height: 44px; margin: 0 0 10px; padding: 10px 12px; border: 2px solid var(--line); background: var(--surface-alt); display: flex; align-items: center; gap: 8px; font: 700 10px/1.35 var(--font-mono), monospace; text-transform: uppercase; }
 .auth-feedback.is-error { background: color-mix(in oklch, var(--accent) 20%, var(--surface)); }
+.otp-inputs { display: flex; gap: 8px; justify-content: space-between; margin: 18px 0; }
+.otp-box {
+  width: 52px; height: 58px; text-align: center; font: 900 24px/1 var(--font-mono), monospace;
+  border: 3px solid var(--line); background: var(--surface); color: var(--ink);
+  box-shadow: 3px 3px 0 var(--line); outline: none; transition: border-color 140ms ease;
+}
+.otp-box:focus { border-color: var(--accent); box-shadow: 4px 4px 0 var(--accent); }
 .auth-actions { display: grid; justify-items: start; gap: 18px; margin-top: 27px; color: var(--muted); font-size: 13px; }
 .auth-actions p { margin: 0; }
 .auth-actions button, .auth-inline-link, .auth-back { padding: 0; border: 0; background: none; color: var(--accent-bright); cursor: pointer; font: 750 12px/1.25 var(--font-mono), monospace; text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 4px; }

@@ -4,9 +4,10 @@ import type { Database } from '@/types/database';
 let client: SupabaseClient<Database> | undefined;
 
 function getConfig() {
+  const env = typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env : process.env;
   return {
-    url: import.meta.env.VITE_SUPABASE_URL,
-    key: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+    url: env.VITE_SUPABASE_URL,
+    key: env.VITE_SUPABASE_PUBLISHABLE_KEY,
   };
 }
 
