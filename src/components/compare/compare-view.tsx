@@ -14,6 +14,7 @@ import {
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { AppSidebar } from '@/components/shared/app-sidebar';
+import { NotificationBell } from '@/components/shared/notification-bell';
 import { ThemeToggle } from '@/components/shared/theme-toggle';
 import { formatTierName, getRankInitials } from '@/lib/riot/format';
 import { getSupabaseClient } from '@/lib/supabase/client';
@@ -344,6 +345,7 @@ export function CompareView() {
             <h1>Comparar Invocadores</h1>
           </div>
           <div className="topbar-actions">
+            <NotificationBell />
             <ThemeToggle />
           </div>
         </header>

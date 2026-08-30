@@ -16,6 +16,7 @@ import {
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { AppSidebar } from '@/components/shared/app-sidebar';
+import { NotificationBell } from '@/components/shared/notification-bell';
 import { ThemeToggle } from '@/components/shared/theme-toggle';
 import { getSupabaseClient } from '@/lib/supabase/client';
 
@@ -249,6 +250,7 @@ export function FriendsView() {
             <h1>Amigos</h1>
           </div>
           <div className="topbar-actions">
+            <NotificationBell />
             <ThemeToggle />
           </div>
         </header>

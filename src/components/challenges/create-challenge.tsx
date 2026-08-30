@@ -1,11 +1,12 @@
 'use client';
 
 import {
-  Bell, CalendarBlank, Check, Crosshair, EnvelopeSimple, FlagCheckered,
+  CalendarBlank, Check, Crosshair, EnvelopeSimple, FlagCheckered,
   ShieldChevron, Sword, Trophy,
 } from '@phosphor-icons/react';
 import { FormEvent, useState } from 'react';
 import { AppSidebar } from '@/components/shared/app-sidebar';
+import { NotificationBell } from '@/components/shared/notification-bell';
 import { ThemeToggle } from '@/components/shared/theme-toggle';
 
 type ChallengeType = 'lp' | 'rank' | 'wins';
@@ -47,7 +48,7 @@ export function CreateChallenge() {
         <header className="topbar">
           <div><p className="eyebrow">Retos / Nuevo</p><h1>Crear un reto</h1></div>
           <div className="topbar-actions">
-            <button className="icon-button notification-button" type="button" aria-label="Ver notificaciones"><Bell size={20} weight="bold" /><span className="notification-dot" /></button>
+            <NotificationBell />
             <ThemeToggle />
             <div className="mini-profile"><span className="avatar avatar-small">AR</span><span><strong>Andre</strong><small>#LAN</small></span></div>
           </div>

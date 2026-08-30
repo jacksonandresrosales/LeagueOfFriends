@@ -3,7 +3,6 @@
 
 import {
   ArrowRight,
-  Bell,
   Check,
   Crosshair,
   Flame,
@@ -14,6 +13,7 @@ import {
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { AppSidebar } from '@/components/shared/app-sidebar';
+import { NotificationBell } from '@/components/shared/notification-bell';
 import { ThemeToggle } from '@/components/shared/theme-toggle';
 import { formatTierName, getRankInitials } from '@/lib/riot/format';
 import { getSupabaseClient } from '@/lib/supabase/client';
@@ -180,7 +180,7 @@ export function Dashboard() {
         <header className="topbar">
           <div><p className="eyebrow">Panel personal / Temporada 2026</p><h1>Tu rendimiento</h1></div>
           <div className="topbar-actions">
-            <button className="icon-button notification-button" type="button" aria-label="Ver notificaciones"><Bell size={20} weight="bold" /><span className="notification-dot" /></button>
+            <NotificationBell />
             <ThemeToggle />
             <div className="mini-profile" aria-label={`Perfil de ${displayName}`}>
               {riotSummary?.profileIconUrl ? (

@@ -17,6 +17,7 @@ import {
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { AppSidebar } from '@/components/shared/app-sidebar';
+import { NotificationBell } from '@/components/shared/notification-bell';
 import { ThemeToggle } from '@/components/shared/theme-toggle';
 import { formatTierName } from '@/lib/riot/format';
 import { getSupabaseClient } from '@/lib/supabase/client';
@@ -386,6 +387,7 @@ export function LeaderboardView() {
             <h1>Tabla de Clasificación</h1>
           </div>
           <div className="topbar-actions">
+            <NotificationBell />
             <ThemeToggle />
           </div>
         </header>
