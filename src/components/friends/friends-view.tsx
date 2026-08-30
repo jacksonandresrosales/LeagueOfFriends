@@ -15,6 +15,7 @@ import {
 } from '@phosphor-icons/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import { AppFooter } from '@/components/shared/app-footer';
 import { AppSidebar } from '@/components/shared/app-sidebar';
 import { NotificationBell } from '@/components/shared/notification-bell';
 import { ThemeToggle } from '@/components/shared/theme-toggle';
@@ -633,6 +634,7 @@ export function FriendsView() {
             </div>
           )
         )}
+        <AppFooter />
       </main>
     </div>
   );

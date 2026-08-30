@@ -16,6 +16,7 @@ import {
 } from '@phosphor-icons/react';
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { AppFooter } from '@/components/shared/app-footer';
 import { AppSidebar } from '@/components/shared/app-sidebar';
 import { NotificationBell } from '@/components/shared/notification-bell';
 import { ThemeToggle } from '@/components/shared/theme-toggle';
@@ -1080,6 +1081,7 @@ export function LeaderboardView() {
             </div>
           </div>
         ) : null}
+        <AppFooter />
       </main>
     </div>
   );

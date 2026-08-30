@@ -11,6 +11,7 @@ import {
   UserPlus,
 } from '@phosphor-icons/react';
 import { FormEvent, useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
 
@@ -552,6 +553,38 @@ export function AuthForm() {
               <span>Volver a iniciar sesión</span>
             </button>
           )}
+        </div>
+
+        <div style={{ marginTop: '28px', paddingTop: '20px', borderTop: '1px solid var(--line)', textAlign: 'center', width: '100%', maxWidth: '380px' }}>
+          <p style={{ font: '800 11px var(--font-mono)', color: 'var(--muted)', margin: '0 0 6px', textTransform: 'uppercase' }}>
+            Desarrollado por{' '}
+            <a
+              href="https://github.com/jacksonandresrosales"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: 'var(--ink)', textDecoration: 'underline' }}
+            >
+              Jackson Ocaña
+            </a>
+          </p>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', font: '700 10px var(--font-mono)', color: 'var(--muted)' }}>
+            <Link href="/terminos" style={{ color: 'inherit', textDecoration: 'underline' }}>
+              Términos
+            </Link>
+            <span>·</span>
+            <Link href="/privacidad" style={{ color: 'inherit', textDecoration: 'underline' }}>
+              Privacidad
+            </Link>
+            <span>·</span>
+            <a
+              href="https://github.com/jacksonandresrosales/LeagueOfFriends"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: 'inherit', textDecoration: 'underline' }}
+            >
+              GitHub
+            </a>
+          </div>
         </div>
       </section>
     </main>

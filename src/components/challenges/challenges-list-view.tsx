@@ -16,6 +16,7 @@ import {
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
+import { AppFooter } from '@/components/shared/app-footer';
 import { AppSidebar } from '@/components/shared/app-sidebar';
 import { NotificationBell } from '@/components/shared/notification-bell';
 import { ThemeToggle } from '@/components/shared/theme-toggle';
@@ -654,6 +655,7 @@ export function ChallengesListView() {
             })}
           </div>
         )}
+        <AppFooter />
       </main>
     </div>
   );

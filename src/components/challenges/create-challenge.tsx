@@ -17,6 +17,7 @@ import {
 } from '@phosphor-icons/react';
 import { FormEvent, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { AppFooter } from '@/components/shared/app-footer';
 import { AppSidebar } from '@/components/shared/app-sidebar';
 import { NotificationBell } from '@/components/shared/notification-bell';
 import { ThemeToggle } from '@/components/shared/theme-toggle';
@@ -749,6 +750,7 @@ export function CreateChallenge() {
             <p className="summary-footnote">Las invitaciones y notificaciones se enviarán al confirmar.</p>
           </aside>
         </form>
+        <AppFooter />
       </main>
     </div>
   );
