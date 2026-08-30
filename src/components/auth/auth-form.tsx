@@ -257,7 +257,31 @@ export function AuthForm() {
   }
 
   return (
-    <div className="auth-form-wrap">
+    <main className="auth-page">
+      <aside className="auth-brand-panel">
+        <div className="brand">
+          <span className="brand-mark">LF</span>
+          <span className="brand-name">
+            LEAGUE<br />OF FRIENDS
+          </span>
+        </div>
+
+        <div className="auth-brand-copy">
+          <p className="eyebrow">Compite con tu círculo cercano</p>
+          <h1>Domina la grieta con tus amigos.</h1>
+          <p>
+            Crea retos personalizados, compara estadísticas cara a cara y sigue tu ascenso en las clasificatorias con datos oficiales de Riot Games.
+          </p>
+        </div>
+
+        <div className="auth-security-note">
+          <ShieldCheck size={20} weight="fill" />
+          <span>Datos en tiempo real · Riot Games API & Resend</span>
+        </div>
+      </aside>
+
+      <section className="auth-form-panel">
+        <div className="auth-form-wrap">
       {mode === 'reset' && resetStep === 'otp' ? (
         <>
           <h2>Verifica el código</h2>
@@ -497,36 +521,39 @@ export function AuthForm() {
         </form>
       )}
 
-      <div className="auth-actions">
-        {mode === 'sign-in' ? (
-          <>
+        </div>
+
+        <div className="auth-actions">
+          {mode === 'sign-in' ? (
+            <>
+              <p>
+                ¿No tienes cuenta todavía?{' '}
+                <button type="button" onClick={() => changeMode('sign-up')}>
+                  Crear una cuenta
+                </button>
+              </p>
+              <p>
+                ¿Olvidaste tu contraseña?{' '}
+                <button type="button" onClick={() => changeMode('reset')}>
+                  Recuperar acceso
+                </button>
+              </p>
+            </>
+          ) : mode === 'sign-up' ? (
             <p>
-              ¿No tienes cuenta todavía?{' '}
-              <button type="button" onClick={() => changeMode('sign-up')}>
-                Crear una cuenta
+              ¿Ya tienes cuenta?{' '}
+              <button type="button" onClick={() => changeMode('sign-in')}>
+                Iniciar sesión
               </button>
             </p>
-            <p>
-              ¿Olvidaste tu contraseña?{' '}
-              <button type="button" onClick={() => changeMode('reset')}>
-                Recuperar acceso
-              </button>
-            </p>
-          </>
-        ) : mode === 'sign-up' ? (
-          <p>
-            ¿Ya tienes cuenta?{' '}
-            <button type="button" onClick={() => changeMode('sign-in')}>
-              Iniciar sesión
+          ) : (
+            <button type="button" className="auth-back" onClick={() => changeMode('sign-in')}>
+              <ArrowLeft size={16} weight="bold" />
+              <span>Volver a iniciar sesión</span>
             </button>
-          </p>
-        ) : (
-          <button type="button" className="auth-back" onClick={() => changeMode('sign-in')}>
-            <ArrowLeft size={16} weight="bold" />
-            <span>Volver a iniciar sesión</span>
-          </button>
-        )}
-      </div>
-    </div>
+          )}
+        </div>
+      </section>
+    </main>
   );
 }
