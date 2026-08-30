@@ -33,30 +33,6 @@ interface FriendCandidate {
   riotAccountId?: number;
 }
 
-const defaultMockFriends: FriendCandidate[] = [
-  {
-    id: 'kuro-mock',
-    name: 'Kuro',
-    tag: '#EUW',
-    initials: 'KU',
-    profileIconUrl: 'https://ddragon.leagueoflegends.com/cdn/15.4.1/img/profileicon/3554.png',
-  },
-  {
-    id: 'solari-mock',
-    name: 'Solari',
-    tag: '#LAN',
-    initials: 'SO',
-    profileIconUrl: 'https://ddragon.leagueoflegends.com/cdn/15.4.1/img/profileicon/1630.png',
-  },
-  {
-    id: 'aegis-mock',
-    name: 'Aegis',
-    tag: '#LAS',
-    initials: 'AE',
-    profileIconUrl: 'https://ddragon.leagueoflegends.com/cdn/15.4.1/img/profileicon/4405.png',
-  },
-];
-
 const challengeTypes = [
   { id: 'lp' as const, title: 'Ganar LP', description: 'Gana la mayor cantidad de LP', icon: Trophy, unit: 'LP', defaultGoal: 100 },
   { id: 'rank' as const, title: 'Subir de rango', description: 'El primero en llegar al objetivo', icon: ShieldChevron, unit: 'Tier', defaultGoal: 1 },
@@ -73,9 +49,9 @@ export function CreateChallenge() {
   const [reward, setReward] = useState('Título de Campeón del Círculo + Honor');
   const [notifications, setNotifications] = useState(true);
 
-  // Amigos reales + candidatos
-  const [friendsList, setFriendsList] = useState<FriendCandidate[]>(defaultMockFriends);
-  const [selectedFriendIds, setSelectedFriendIds] = useState<string[]>(['kuro-mock']);
+  // Amigos reales de Supabase
+  const [friendsList, setFriendsList] = useState<FriendCandidate[]>([]);
+  const [selectedFriendIds, setSelectedFriendIds] = useState<string[]>([]);
 
   // Modal / Buscador Riot ID
   const [showRiotSearch, setShowRiotSearch] = useState(false);
@@ -133,18 +109,12 @@ export function CreateChallenge() {
             name,
             tag,
             initials: name.slice(0, 2).toUpperCase(),
+            profileIconUrl: friendProfile.avatar_url || 'https://ddragon.leagueoflegends.com/cdn/15.4.1/img/profileicon/5466.png',
             riotAccountId: riotAcc?.id,
           });
         }
 
-        // Combinar con los mocks para que siempre haya variedad
-        const combined = [...loaded];
-        for (const mock of defaultMockFriends) {
-          if (!combined.some((c) => c.name.toLowerCase() === mock.name.toLowerCase())) {
-            combined.push(mock);
-          }
-        }
-        setFriendsList(combined);
+        setFriendsList(loaded);
         if (loaded.length > 0) {
           setSelectedFriendIds([loaded[0].id]);
         }
@@ -514,30 +484,49 @@ export function CreateChallenge() {
                 </div>
               </div>
 
-              <div className="friend-picker">
-                {friendsList.map((friend) => {
-                  const selected = selectedFriendIds.includes(friend.id);
-                  return (
-                    <label key={friend.id} className={selected ? 'friend-option is-selected' : 'friend-option'}>
-                      <input type="checkbox" checked={selected} onChange={() => toggleFriend(friend.id)} />
-                      <div className="friend-option-info">
-                        {friend.profileIconUrl ? (
-                          <div className="friend-option-avatar">
-                            <img src={friend.profileIconUrl} alt="" width={40} height={40} />
+              {friendsList.length === 0 ? (
+                <div
+                  style={{
+                    padding: '16px',
+                    border: '2px dashed var(--line)',
+                    background: 'var(--surface-alt)',
+                    textAlign: 'center',
+                    marginBottom: '12px',
+                  }}
+                >
+                  <p style={{ margin: '0 0 6px', font: '700 12px var(--font-mono)', color: 'var(--muted)' }}>
+                    Aún no tienes amigos en tu círculo.
+                  </p>
+                  <p style={{ margin: 0, font: '700 11px var(--font-mono)' }}>
+                    Puedes invitar a tus rivales buscando su Riot ID abajo o agregarlos en Amigos.
+                  </p>
+                </div>
+              ) : (
+                <div className="friend-picker">
+                  {friendsList.map((friend) => {
+                    const selected = selectedFriendIds.includes(friend.id);
+                    return (
+                      <label key={friend.id} className={selected ? 'friend-option is-selected' : 'friend-option'}>
+                        <input type="checkbox" checked={selected} onChange={() => toggleFriend(friend.id)} />
+                        <div className="friend-option-info">
+                          {friend.profileIconUrl ? (
+                            <div className="friend-option-avatar">
+                              <img src={friend.profileIconUrl} alt="" width={40} height={40} />
+                            </div>
+                          ) : (
+                            <span className="avatar avatar-small">{friend.initials}</span>
+                          )}
+                          <div className="friend-option-names">
+                            <strong>{friend.name}</strong>
+                            <small>{friend.tag}</small>
                           </div>
-                        ) : (
-                          <span className="avatar avatar-small">{friend.initials}</span>
-                        )}
-                        <div className="friend-option-names">
-                          <strong>{friend.name}</strong>
-                          <small>{friend.tag}</small>
                         </div>
-                      </div>
-                      <span className="selection-box">{selected ? <Check size={16} weight="bold" /> : null}</span>
-                    </label>
-                  );
-                })}
-              </div>
+                        <span className="selection-box">{selected ? <Check size={16} weight="bold" /> : null}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
 
               {/* Botón y Panel para Invitar por Riot ID */}
               {!showRiotSearch ? (

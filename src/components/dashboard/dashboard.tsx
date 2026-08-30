@@ -7,8 +7,10 @@ import {
   Crosshair,
   Flame,
   GameController,
+  Plus,
   ShieldChevron,
   Trophy,
+  UsersThree,
 } from '@phosphor-icons/react';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -22,17 +24,15 @@ import type { Database } from '@/types/database';
 type Period = 'Día' | 'Semana' | 'Mes';
 const periods: Period[] = ['Día', 'Semana', 'Mes'];
 
-type RiotAccountRow = Database['public']['Tables']['riot_accounts']['Row'];
-type RankedSnapshotRow = Database['public']['Tables']['ranked_snapshots']['Row'];
 type ProfileRow = Database['public']['Tables']['profiles']['Row'];
+type RankedSnapshotRow = Database['public']['Tables']['ranked_snapshots']['Row'];
+type RiotAccountRow = Database['public']['Tables']['riot_accounts']['Row'];
 
 interface RiotSummary {
-  gameName: string;
-  tagLine: string;
-  platform: string;
   summonerLevel: number;
   profileIconUrl: string;
   splashArtUrl: string;
+  platform: string;
   topChampion: {
     name: string;
     points: number;
@@ -40,46 +40,75 @@ interface RiotSummary {
   };
 }
 
-const periodData: Record<Period, { lp: string; games: string; wins: string; rate: string; playerPath: string; rivalPath: string }> = {
+interface FriendLeaderboardItem {
+  id: string;
+  name: string;
+  tag: string;
+  lp: number;
+  profileIconUrl?: string;
+  initials: string;
+  isCurrentUser: boolean;
+}
+
+interface ActiveChallengeItem {
+  id: number | string;
+  name: string;
+  metric: string;
+  targetValue: number;
+  daysRemaining: number;
+  currentProgress: number;
+  percentage: number;
+}
+
+const periodChartData: Record<Period, { points: number; path: string; dates: string[] }> = {
   Día: {
-    lp: '+22', games: '4', wins: '3', rate: '75%',
-    playerPath: 'M0 176 C54 158 74 174 126 137 S211 121 263 88 S358 101 420 46 S511 58 570 24',
-    rivalPath: 'M0 185 C59 177 83 144 141 151 S230 115 287 124 S374 78 428 91 S516 64 570 73',
+    points: 0,
+    path: 'M0 188 C54 188 74 188 126 188 S211 188 263 188 S358 188 420 188 S511 188 570 188',
+    dates: ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00', '23:59'],
   },
   Semana: {
-    lp: '+138', games: '27', wins: '17', rate: '63%',
-    playerPath: 'M0 181 C46 170 80 188 127 148 S210 126 264 93 S355 110 419 52 S510 63 570 25',
-    rivalPath: 'M0 190 C49 181 89 146 142 158 S229 118 286 130 S372 83 429 97 S515 70 570 78',
+    points: 0,
+    path: 'M0 188 C46 188 80 188 127 188 S210 188 264 188 S355 188 419 188 S510 188 570 188',
+    dates: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'],
   },
   Mes: {
-    lp: '+306', games: '82', wins: '49', rate: '60%',
-    playerPath: 'M0 190 C52 179 74 160 127 171 S215 118 267 126 S355 69 421 80 S511 39 570 20',
-    rivalPath: 'M0 183 C56 151 85 175 143 140 S233 150 289 104 S376 120 431 86 S516 101 570 65',
+    points: 0,
+    path: 'M0 188 C52 188 74 188 127 188 S215 188 267 188 S355 188 421 188 S511 188 570 188',
+    dates: ['Sem 1', 'Sem 2', 'Sem 3', 'Sem 4'],
   },
 };
 
-const defaultFriends = [
-  { place: '01', name: 'Andre', tag: '#LAN', lp: '+138', tone: 'red' },
-  { place: '02', name: 'Kuro', tag: '#EUW', lp: '+112', tone: 'dark' },
-  { place: '03', name: 'Maya', tag: '#LAS', lp: '+84', tone: 'light' },
-  { place: '04', name: 'Nox', tag: '#LAN', lp: '+61', tone: 'muted' },
-];
-
 function PerformanceChart({ period }: { period: Period }) {
-  const data = periodData[period];
-  const pointY = period === 'Día' ? 24 : period === 'Semana' ? 25 : 20;
+  const data = periodChartData[period];
+
   return (
     <figure className="chart" aria-label={`Evolución de LP durante el periodo: ${period}`}>
-      <div className="chart-y-axis" aria-hidden="true"><span>+160</span><span>+120</span><span>+80</span><span>+40</span><span>0</span></div>
-      <svg viewBox="0 0 570 210" role="img" aria-labelledby="chart-title chart-description" preserveAspectRatio="none">
-        <title id="chart-title">Comparativa de puntos de liga</title>
-        <desc id="chart-description">Evolución de puntos de liga durante el periodo.</desc>
-        {[20, 62, 104, 146, 188].map((y) => <line key={y} x1="0" y1={y} x2="570" y2={y} className="grid-line" />)}
-        <path d={data.rivalPath} className="chart-line rival-line" />
-        <path d={data.playerPath} className="chart-line player-line" />
-        <circle cx="570" cy={pointY} r="6" className="chart-point" />
+      <div className="chart-y-axis" aria-hidden="true">
+        <span>+160</span>
+        <span>+120</span>
+        <span>+80</span>
+        <span>+40</span>
+        <span>0</span>
+      </div>
+      <svg
+        viewBox="0 0 570 210"
+        role="img"
+        aria-labelledby="chart-title chart-description"
+        preserveAspectRatio="none"
+      >
+        <title id="chart-title">Evolución de puntos de liga</title>
+        <desc id="chart-description">Gráfico de líneas que muestra la ganancia de LP para el invocador.</desc>
+        {[20, 62, 104, 146, 188].map((y) => (
+          <line key={y} x1="0" y1={y} x2="570" y2={y} className="grid-line" />
+        ))}
+        <path d={data.path} className="chart-line player-line" />
+        <circle cx="570" cy={188} r="6" className="chart-point" />
       </svg>
-      <div className="chart-x-axis" aria-hidden="true"><span>Lun</span><span>Mar</span><span>Mié</span><span>Jue</span><span>Vie</span><span>Sáb</span><span>Dom</span></div>
+      <div className="chart-x-axis" aria-hidden="true">
+        {data.dates.map((item) => (
+          <span key={item}>{item}</span>
+        ))}
+      </div>
     </figure>
   );
 }
@@ -90,6 +119,8 @@ export function Dashboard() {
   const [riotAccount, setRiotAccount] = useState<RiotAccountRow | null>(null);
   const [snapshot, setSnapshot] = useState<RankedSnapshotRow | null>(null);
   const [riotSummary, setRiotSummary] = useState<RiotSummary | null>(null);
+  const [friendsLeaderboard, setFriendsLeaderboard] = useState<FriendLeaderboardItem[]>([]);
+  const [activeChallenge, setActiveChallenge] = useState<ActiveChallengeItem | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -102,11 +133,13 @@ export function Dashboard() {
         return;
       }
 
+      const userId = userData.user.id;
+
       // 1. Cargar perfil
       const { data: profileData } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', userData.user.id)
+        .eq('id', userId)
         .maybeSingle();
 
       if (profileData) setProfile(profileData);
@@ -115,9 +148,11 @@ export function Dashboard() {
       const { data: accountData } = await supabase
         .from('riot_accounts')
         .select('*')
-        .eq('profile_id', userData.user.id)
+        .eq('profile_id', userId)
         .eq('is_primary', true)
         .maybeSingle();
+
+      let currentLp = 0;
 
       if (accountData) {
         setRiotAccount(accountData);
@@ -133,9 +168,10 @@ export function Dashboard() {
 
         if (snapshotData) {
           setSnapshot(snapshotData);
+          currentLp = snapshotData.league_points;
         }
 
-        // 4. Cargar resumen enriquecido de Riot Games (splash art, profile icon, top champion)
+        // 4. Cargar resumen enriquecido de Riot Games
         try {
           const { data: sessionData } = await supabase.auth.getSession();
           const token = sessionData.session?.access_token;
@@ -149,8 +185,101 @@ export function Dashboard() {
             }
           }
         } catch {
-          // Si falla, se muestra la vista estándar
+          // Fallback silencioso
         }
+      }
+
+      // 5. Cargar ranking del círculo de amigos
+      const myDisplayName = accountData?.game_name || profileData?.display_name || 'Invocador';
+      const myTag = accountData ? `#${accountData.tag_line}` : '#LAN';
+
+      const leaderboard: FriendLeaderboardItem[] = [
+        {
+          id: userId,
+          name: myDisplayName,
+          tag: myTag,
+          lp: currentLp,
+          initials: myDisplayName.slice(0, 2).toUpperCase(),
+          isCurrentUser: true,
+        },
+      ];
+
+      const { data: friendships } = await supabase
+        .from('friendships')
+        .select(`
+          requester_id,
+          addressee_id,
+          requester:profiles!friendships_requester_id_fkey(id, display_name),
+          addressee:profiles!friendships_addressee_id_fkey(id, display_name)
+        `)
+        .eq('status', 'accepted')
+        .or(`requester_id.eq.${userId},addressee_id.eq.${userId}`);
+
+      for (const f of friendships || []) {
+        const isSender = f.requester_id === userId;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const friendProfile = isSender ? (f.addressee as any) : (f.requester as any);
+        if (!friendProfile) continue;
+
+        const { data: fRiot } = await supabase
+          .from('riot_accounts')
+          .select('*')
+          .eq('profile_id', friendProfile.id)
+          .eq('is_primary', true)
+          .maybeSingle();
+
+        let fLp = 0;
+        if (fRiot) {
+          const { data: fSnap } = await supabase
+            .from('ranked_snapshots')
+            .select('league_points')
+            .eq('riot_account_id', fRiot.id)
+            .order('captured_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          if (fSnap) fLp = fSnap.league_points;
+        }
+
+        const fname = fRiot?.game_name || friendProfile.display_name;
+        leaderboard.push({
+          id: friendProfile.id,
+          name: fname,
+          tag: fRiot ? `#${fRiot.tag_line}` : '#LAN',
+          lp: fLp,
+          initials: fname.slice(0, 2).toUpperCase(),
+          isCurrentUser: false,
+        });
+      }
+
+      leaderboard.sort((a, b) => b.lp - a.lp);
+      setFriendsLeaderboard(leaderboard);
+
+      // 6. Cargar reto activo
+      const { data: chall } = await supabase
+        .from('challenges')
+        .select('*')
+        .eq('status', 'active')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (chall) {
+        const endsDate = new Date(chall.ends_at);
+        const now = new Date();
+        const diffDays = Math.max(0, Math.ceil((endsDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
+        const targetVal = chall.target_value || 100;
+        const progress = Math.min(targetVal, currentLp);
+        const pct = targetVal > 0 ? Math.round((progress / targetVal) * 100) : 0;
+
+        setActiveChallenge({
+          id: chall.id,
+          name: chall.name,
+          metric: chall.metric,
+          targetValue: targetVal,
+          daysRemaining: diffDays,
+          currentProgress: progress,
+          percentage: pct,
+        });
       }
 
       setLoading(false);
@@ -317,7 +446,6 @@ export function Dashboard() {
             </div>
             <div className="chart-legend">
               <span><i className="legend-player" /> Tú <strong>{lp} LP</strong></span>
-              <span><i className="legend-rival" /> Kuro <strong>+112 LP</strong></span>
             </div>
             <PerformanceChart period={period} />
           </section>
@@ -325,39 +453,71 @@ export function Dashboard() {
           <section className="panel leaderboard-panel" aria-labelledby="leaderboard-title">
             <div className="panel-heading compact"><div><p className="eyebrow">Tu círculo</p><h2 id="leaderboard-title">Clasificación</h2></div><Trophy size={27} weight="fill" /></div>
             <ol className="friends-list">
-              <li className="current-user">
-                <span className="place">01</span>
-                {riotSummary?.profileIconUrl ? (
-                  <img
-                    src={riotSummary.profileIconUrl}
-                    alt={displayName}
-                    width={38}
-                    height={38}
-                    style={{ border: '2px solid var(--line)', background: 'var(--surface)' }}
-                  />
-                ) : (
-                  <span className="avatar avatar-red">{initials}</span>
-                )}
-                <span className="friend-name"><strong>{displayName}</strong><small>{tagLine}</small></span>
-                <strong className="friend-lp">{lp} LP</strong>
-              </li>
-              {defaultFriends.slice(1).map((friend, idx) => (
-                <li key={friend.name}>
-                  <span className="place">{`0${idx + 2}`}</span>
-                  <span className={`avatar avatar-${friend.tone}`}>{friend.name.slice(0, 2).toUpperCase()}</span>
-                  <span className="friend-name"><strong>{friend.name}</strong><small>{friend.tag}</small></span>
-                  <strong className="friend-lp">{friend.lp}</strong>
+              {friendsLeaderboard.map((item, idx) => (
+                <li key={item.id} className={item.isCurrentUser ? 'current-user' : ''}>
+                  <span className="place">{idx < 9 ? `0${idx + 1}` : `${idx + 1}`}</span>
+                  {item.isCurrentUser && riotSummary?.profileIconUrl ? (
+                    <img
+                      src={riotSummary.profileIconUrl}
+                      alt={item.name}
+                      width={38}
+                      height={38}
+                      style={{ border: '2px solid var(--line)', background: 'var(--surface)' }}
+                    />
+                  ) : (
+                    <span className="avatar avatar-red">{item.initials}</span>
+                  )}
+                  <span className="friend-name">
+                    <strong>{item.name}</strong>
+                    <small>{item.tag} {item.isCurrentUser ? '(Tú)' : ''}</small>
+                  </span>
+                  <strong className="friend-lp">{item.lp} LP</strong>
                 </li>
               ))}
             </ol>
-            <Link href="/clasificacion" className="text-button">Ver clasificación completa →</Link>
+            {friendsLeaderboard.length <= 1 ? (
+              <div style={{ marginTop: '12px', padding: '10px 12px', background: 'var(--surface-alt)', border: '2px dashed var(--line)', textAlign: 'center' }}>
+                <p style={{ margin: '0 0 6px', font: '700 11px var(--font-mono)', color: 'var(--muted)' }}>
+                  Aún no has agregado amigos a tu círculo.
+                </p>
+                <Link href="/amigos" className="secondary-button" style={{ display: 'inline-flex', padding: '4px 10px', fontSize: '10px', textDecoration: 'none' }}>
+                  <UsersThree size={14} weight="bold" />
+                  <span>Buscar Amigos</span>
+                </Link>
+              </div>
+            ) : null}
+            <Link href="/clasificacion" className="text-button" style={{ marginTop: '12px', display: 'inline-block' }}>Ver clasificación completa →</Link>
           </section>
 
           <section className="panel challenge-panel" aria-labelledby="challenge-title">
             <div className="challenge-symbol"><Crosshair size={42} weight="bold" /></div>
-            <div className="challenge-info"><p className="eyebrow">Reto activo / 18 días restantes</p><h2 id="challenge-title">Carrera a Esmeralda IV</h2><p>El primero en alcanzar Esmeralda IV gana. Tú vs Kuro, una sola meta.</p></div>
-            <div className="challenge-progress"><div><span>Tu progreso</span><strong>61 / 100 LP</strong></div><div className="progress-track large"><span style={{ width: '61%' }} /></div><small><Check size={15} weight="bold" /> 61% completado · 18 días restantes</small></div>
-            <Link href="/retos?challengeId=ch-1" className="secondary-button">Ver reto</Link>
+            {activeChallenge ? (
+              <>
+                <div className="challenge-info">
+                  <p className="eyebrow">Reto activo / {activeChallenge.daysRemaining} días restantes</p>
+                  <h2 id="challenge-title">{activeChallenge.name}</h2>
+                  <p>Compite en clasificatorias para alcanzar la meta antes que tus rivales.</p>
+                </div>
+                <div className="challenge-progress">
+                  <div><span>Tu progreso</span><strong>{activeChallenge.currentProgress} / {activeChallenge.targetValue} LP</strong></div>
+                  <div className="progress-track large"><span style={{ width: `${activeChallenge.percentage}%` }} /></div>
+                  <small><Check size={15} weight="bold" /> {activeChallenge.percentage}% completado</small>
+                </div>
+                <Link href={`/retos?challengeId=${activeChallenge.id}`} className="secondary-button">Ver reto</Link>
+              </>
+            ) : (
+              <>
+                <div className="challenge-info">
+                  <p className="eyebrow">Sin retos activos</p>
+                  <h2 id="challenge-title">Desafía a tu Círculo</h2>
+                  <p>Crea una carrera de LP o división y mide tu progreso en tiempo real.</p>
+                </div>
+                <Link href="/retos/nuevo" className="create-button" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', margin: '14px 0 0' }}>
+                  <Plus size={16} weight="bold" />
+                  <span>Crear Primer Reto</span>
+                </Link>
+              </>
+            )}
           </section>
         </div>
       </main>

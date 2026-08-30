@@ -44,6 +44,7 @@ interface RankedEntry {
   splashArtUrl?: string;
   summonerLevel?: number;
   hasRiotAccount: boolean;
+  isFriend?: boolean;
 }
 
 const mockCommunityPlayers: RankedEntry[] = [
@@ -308,6 +309,7 @@ export function LeaderboardView() {
             totalGames: fTotal,
             winRate: fTotal > 0 ? Math.round((fWins / fTotal) * 100) : 0,
             hasRiotAccount: !!friendRiot,
+            isFriend: true,
           });
         }
       }
@@ -316,7 +318,7 @@ export function LeaderboardView() {
       const combined = [...entries];
       for (const cp of mockCommunityPlayers) {
         if (!combined.some((e) => e.displayName.toLowerCase() === cp.displayName.toLowerCase())) {
-          combined.push(cp);
+          combined.push({ ...cp, isFriend: false });
         }
       }
 
@@ -335,6 +337,11 @@ export function LeaderboardView() {
   // Filtrado y ordenamiento de la tabla
   const filteredAndSortedPlayers = useMemo(() => {
     let result = [...players];
+
+    // Filtro por ámbito (Solo amigos vs LAN general)
+    if (scope === 'friends') {
+      result = result.filter((p) => p.isCurrentUser || p.isFriend);
+    }
 
     // Filtro de búsqueda por nombre
     if (searchQuery.trim()) {
@@ -372,7 +379,7 @@ export function LeaderboardView() {
     });
 
     return result;
-  }, [players, searchQuery, tierFilter, sortBy]);
+  }, [players, searchQuery, tierFilter, sortBy, scope]);
 
   const top3 = filteredAndSortedPlayers.slice(0, 3);
   const currentUserPosition = filteredAndSortedPlayers.findIndex((p) => p.isCurrentUser) + 1;

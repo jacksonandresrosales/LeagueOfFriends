@@ -51,165 +51,147 @@ interface ChallengeItem {
   winnerIsCurrentUser?: boolean;
 }
 
-const mockChallenges: ChallengeItem[] = [
-  {
-    id: 'ch-1',
-    title: 'Carrera a Esmeralda IV',
-    type: 'rank',
-    status: 'active',
-    createdByMe: true,
-    createdAt: '2026-08-20',
-    endDate: '2026-09-20',
-    daysRemaining: 18,
-    targetMetric: 'Alcanzar Rango Esmeralda IV',
-    targetValue: 100,
-    reward: 'Título de Campeón del Círculo + Honor',
-    participants: [
-      {
-        id: 'user-1',
-        displayName: 'jacksONFIRE',
-        tagLine: '#ASM',
-        profileIconUrl: 'https://ddragon.leagueoflegends.com/cdn/15.4.1/img/profileicon/5466.png',
-        currentValue: 61,
-        targetValue: 100,
-        percentage: 61,
-        isCurrentUser: true,
-      },
-      {
-        id: 'user-2',
-        displayName: 'Kuro',
-        tagLine: '#EUW',
-        profileIconUrl: 'https://ddragon.leagueoflegends.com/cdn/15.4.1/img/profileicon/3554.png',
-        currentValue: 78,
-        targetValue: 100,
-        percentage: 78,
-        isCurrentUser: false,
-      },
-    ],
-  },
-  {
-    id: 'ch-2',
-    title: 'Duelo de 100 LP en Fin de Semana',
-    type: 'lp',
-    status: 'active',
-    createdByMe: false,
-    createdAt: '2026-08-28',
-    endDate: '2026-09-04',
-    daysRemaining: 5,
-    targetMetric: '+100 Puntos de Liga (LP)',
-    targetValue: 100,
-    reward: 'Skin misteriosa de regalo',
-    participants: [
-      {
-        id: 'user-1',
-        displayName: 'jacksONFIRE',
-        tagLine: '#ASM',
-        profileIconUrl: 'https://ddragon.leagueoflegends.com/cdn/15.4.1/img/profileicon/5466.png',
-        currentValue: 45,
-        targetValue: 100,
-        percentage: 45,
-        isCurrentUser: true,
-      },
-      {
-        id: 'user-3',
-        displayName: 'Aegis',
-        tagLine: '#LAS',
-        profileIconUrl: 'https://ddragon.leagueoflegends.com/cdn/15.4.1/img/profileicon/4405.png',
-        currentValue: 30,
-        targetValue: 100,
-        percentage: 30,
-        isCurrentUser: false,
-      },
-    ],
-  },
-  {
-    id: 'ch-3',
-    title: 'Desafío de 20 Victorias en Ranked',
-    type: 'wins',
-    status: 'pending_acceptance',
-    createdByMe: false,
-    createdAt: '2026-08-29',
-    endDate: '2026-09-15',
-    daysRemaining: 16,
-    targetMetric: 'Primero en sumar 20 victorias',
-    targetValue: 20,
-    reward: 'Cena de celebración',
-    participants: [
-      {
-        id: 'user-4',
-        displayName: 'Solari',
-        tagLine: '#LAN',
-        profileIconUrl: 'https://ddragon.leagueoflegends.com/cdn/15.4.1/img/profileicon/1630.png',
-        currentValue: 0,
-        targetValue: 20,
-        percentage: 0,
-        isCurrentUser: false,
-      },
-      {
-        id: 'user-1',
-        displayName: 'jacksONFIRE',
-        tagLine: '#ASM',
-        profileIconUrl: 'https://ddragon.leagueoflegends.com/cdn/15.4.1/img/profileicon/5466.png',
-        currentValue: 0,
-        targetValue: 20,
-        percentage: 0,
-        isCurrentUser: true,
-      },
-    ],
-  },
-  {
-    id: 'ch-4',
-    title: 'Sprint de Apertura Split 2',
-    type: 'lp',
-    status: 'completed',
-    createdByMe: true,
-    createdAt: '2026-08-01',
-    endDate: '2026-08-15',
-    daysRemaining: 0,
-    targetMetric: '+80 LP en 14 días',
-    targetValue: 80,
-    reward: 'Gloria en el Círculo',
-    winnerName: 'jacksONFIRE',
-    winnerIsCurrentUser: true,
-    participants: [
-      {
-        id: 'user-1',
-        displayName: 'jacksONFIRE',
-        tagLine: '#ASM',
-        profileIconUrl: 'https://ddragon.leagueoflegends.com/cdn/15.4.1/img/profileicon/5466.png',
-        currentValue: 85,
-        targetValue: 80,
-        percentage: 100,
-        isCurrentUser: true,
-      },
-      {
-        id: 'user-2',
-        displayName: 'Kuro',
-        tagLine: '#EUW',
-        profileIconUrl: 'https://ddragon.leagueoflegends.com/cdn/15.4.1/img/profileicon/3554.png',
-        currentValue: 62,
-        targetValue: 80,
-        percentage: 77,
-        isCurrentUser: false,
-      },
-    ],
-  },
-];
-
 export function ChallengesListView() {
   const searchParams = useSearchParams();
   const targetId = searchParams.get('challengeId');
 
-  const [activeTab, setActiveTab] = useState<TabType>(() => {
-    if (!targetId) return 'active';
-    const match = mockChallenges.find((c) => c.id === targetId);
-    if (match?.status === 'completed') return 'history';
-    if (match?.status === 'pending_acceptance') return 'pending';
-    return 'active';
-  });
-
-  const [challenges, setChallenges] = useState<ChallengeItem[]>(mockChallenges);
+  const [activeTab, setActiveTab] = useState<TabType>('active');
+  const [challenges, setChallenges] = useState<ChallengeItem[]>([]);
+  const [loading, setLoading] = useState(true);
   const [actionNotice, setActionNotice] = useState('');
+
+  useEffect(() => {
+    async function loadData() {
+      const supabase = getSupabaseClient();
+      const { data: userData } = await supabase.auth.getUser();
+
+      if (!userData?.user) {
+        setLoading(false);
+        return;
+      }
+
+      const currentUserId = userData.user.id;
+
+      try {
+        // Cargar retos donde el usuario es creador o participante
+        const { data: dbChallenges } = await supabase
+          .from('challenges')
+          .select(`
+            *,
+            participants:challenge_participants(
+              profile_id,
+              role,
+              status,
+              baseline_value,
+              current_value,
+              profile:profiles(id, display_name, avatar_url),
+              riot_account:riot_accounts(game_name, tag_line)
+            )
+          `)
+          .order('created_at', { ascending: false });
+
+        if (dbChallenges && dbChallenges.length > 0) {
+          const mapped: ChallengeItem[] = dbChallenges.map((ch) => {
+            const ends = new Date(ch.ends_at);
+            const now = new Date();
+            const diffDays = Math.max(0, Math.ceil((ends.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
+            const isCompleted = ch.status === 'completed' || diffDays === 0;
+            const targetVal = ch.target_value || 100;
+
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const parts: ChallengeParticipant[] = (ch.participants || []).map((p: any) => {
+              const name = p.riot_account?.game_name || p.profile?.display_name || 'Invocador';
+              const tag = p.riot_account ? `#${p.riot_account.tag_line}` : '#LAN';
+              const curVal = p.current_value || 0;
+              const pct = targetVal > 0 ? Math.min(100, Math.round((curVal / targetVal) * 100)) : 0;
+
+              return {
+                id: p.profile_id,
+                displayName: name,
+                tagLine: tag,
+                profileIconUrl: p.profile?.avatar_url || 'https://ddragon.leagueoflegends.com/cdn/15.4.1/img/profileicon/5466.png',
+                currentValue: curVal,
+                targetValue: targetVal,
+                percentage: pct,
+                isCurrentUser: p.profile_id === currentUserId,
+              };
+            });
+
+            // Si el creador no estaba en los participants mapeados, agregarlo
+            if (parts.length === 0) {
+              parts.push({
+                id: currentUserId,
+                displayName: 'Tú',
+                tagLine: '#LAN',
+                profileIconUrl: 'https://ddragon.leagueoflegends.com/cdn/15.4.1/img/profileicon/5466.png',
+                currentValue: 0,
+                targetValue: targetVal,
+                percentage: 0,
+                isCurrentUser: true,
+              });
+            }
+
+            const isCreatedByMe = ch.creator_id === currentUserId;
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const myParticipation = (ch.participants || []).find((p: any) => p.profile_id === currentUserId);
+            const isPending = myParticipation?.status === 'invited';
+
+            const challengeStatus: 'active' | 'pending_acceptance' | 'completed' = isCompleted
+              ? 'completed'
+              : isPending
+                ? 'pending_acceptance'
+                : 'active';
+
+            const metricText =
+              ch.metric === 'rank'
+                ? `Alcanzar ${ch.target_tier || 'Esmeralda'} ${ch.target_division || 'IV'}`
+                : ch.metric === 'wins'
+                  ? `Primero en sumar ${targetVal} victorias`
+                  : `+${targetVal} Puntos de Liga (LP)`;
+
+            const rules = ch.rules as Record<string, unknown> | null;
+            const rewardText = (rules?.reward as string) || 'Título de Campeón del Círculo + Honor';
+
+            return {
+              id: String(ch.id),
+              title: ch.name,
+              type: (ch.metric as 'lp' | 'rank' | 'wins') || 'lp',
+              status: challengeStatus,
+              createdByMe: isCreatedByMe,
+              createdAt: ch.created_at,
+              endDate: ch.ends_at,
+              daysRemaining: diffDays,
+              targetMetric: metricText,
+              targetValue: targetVal,
+              reward: rewardText,
+              participants: parts,
+            };
+          });
+
+          setChallenges(mapped);
+
+          if (targetId) {
+            const match = mapped.find((c) => c.id === targetId);
+            if (match) {
+              setActiveTab(
+                match.status === 'completed'
+                  ? 'history'
+                  : match.status === 'pending_acceptance'
+                    ? 'pending'
+                    : 'active',
+              );
+            }
+          }
+        }
+      } catch {
+        // Fallback
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    void loadData();
+  }, [targetId]);
 
   useEffect(() => {
     if (targetId) {
@@ -223,19 +205,17 @@ export function ChallengesListView() {
     }
   }, [targetId]);
 
-  useEffect(() => {
-    async function loadData() {
-      const supabase = getSupabaseClient();
-      const { data: userData } = await supabase.auth.getUser();
-
-      if (userData?.user) {
-        // En una etapa avanzada, aquí se cargan los retos de public.challenges y challenge_participants
-      }
+  async function handleAccept(challengeId: string) {
+    const supabase = getSupabaseClient();
+    const { data: userData } = await supabase.auth.getUser();
+    if (userData?.user) {
+      await supabase
+        .from('challenge_participants')
+        .update({ status: 'accepted', joined_at: new Date().toISOString() })
+        .eq('challenge_id', Number(challengeId))
+        .eq('profile_id', userData.user.id);
     }
-    void loadData();
-  }, []);
 
-  function handleAccept(challengeId: string) {
     setChallenges((prev) =>
       prev.map((ch) => (ch.id === challengeId ? { ...ch, status: 'active' } : ch)),
     );
@@ -243,7 +223,17 @@ export function ChallengesListView() {
     setTimeout(() => setActionNotice(''), 4000);
   }
 
-  function handleReject(challengeId: string) {
+  async function handleReject(challengeId: string) {
+    const supabase = getSupabaseClient();
+    const { data: userData } = await supabase.auth.getUser();
+    if (userData?.user) {
+      await supabase
+        .from('challenge_participants')
+        .update({ status: 'declined' })
+        .eq('challenge_id', Number(challengeId))
+        .eq('profile_id', userData.user.id);
+    }
+
     setChallenges((prev) => prev.filter((ch) => ch.id !== challengeId));
     setActionNotice('Invitación rechazada.');
     setTimeout(() => setActionNotice(''), 4000);
@@ -275,91 +265,124 @@ export function ChallengesListView() {
           </div>
         </header>
 
-        {/* Intro con Acción Destacada */}
-        <div className="challenge-intro" style={{ justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px' }}>
+        <div className="challenge-intro">
           <div>
             <span className="section-index"><Sword size={24} weight="bold" /></span>
-            <h2>Compite directamente<br />con tus rivales.</h2>
-            <p style={{ margin: '8px 0 0', maxWidth: '520px' }}>
-              Pon metas claras de LP o rangos, sigue la carrera en tiempo real y demuestra quién manda en la grieta.
-            </p>
+            <h2>Compite contra tu círculo.<br />Mide quién sube más rápido.</h2>
           </div>
-
-          <Link href="/retos/nuevo" className="create-button" style={{ margin: 0, padding: '0 24px', minHeight: '52px', textDecoration: 'none' }}>
-            <Plus size={22} weight="bold" />
-            <span>Crear Nuevo Reto</span>
-          </Link>
+          <p>Lanza carreras de LP, duelos de fin de semana o carreras de división en clasificatorias.</p>
         </div>
 
-        {/* Métricas Resumen de Retos */}
-        <section className="metrics" style={{ marginBottom: '32px' }}>
-          <article className="metric">
-            <span className="eyebrow">En Curso</span>
+        {/* Métricas Resumen */}
+        <section className="metrics" style={{ gridTemplateColumns: 'repeat(4, 1fr)', marginBottom: '32px' }}>
+          <article className="metric metric-featured">
+            <span className="metric-label">Retos Activos</span>
             <strong>{activeChallenges.length}</strong>
-            <small>Retos activos</small>
+            <small>En curso</small>
           </article>
           <article className="metric">
-            <span className="eyebrow">Invitaciones</span>
-            <strong style={{ color: pendingChallenges.length > 0 ? 'var(--accent-bright)' : 'var(--ink)' }}>
-              {pendingChallenges.length}
+            <span className="metric-label">Invitaciones</span>
+            <strong>{pendingChallenges.length}</strong>
+            <small>{pendingChallenges.length === 1 ? '1 pendiente' : `${pendingChallenges.length} pendientes`}</small>
+          </article>
+          <article className="metric">
+            <span className="metric-label">Victorias</span>
+            <strong>{historyChallenges.filter((ch) => ch.winnerIsCurrentUser).length}</strong>
+            <small>Retos ganados</small>
+          </article>
+          <article className="metric">
+            <span className="metric-label">Tasa de Éxito</span>
+            <strong>
+              {historyChallenges.length > 0
+                ? `${Math.round((historyChallenges.filter((ch) => ch.winnerIsCurrentUser).length / historyChallenges.length) * 100)}%`
+                : '0%'}
             </strong>
-            <small>Pendientes por aceptar</small>
-          </article>
-          <article className="metric">
-            <span className="eyebrow">Victorias</span>
-            <strong>3</strong>
-            <small>Retos conquistados</small>
-          </article>
-          <article className="metric">
-            <span className="eyebrow">Tasa de Éxito</span>
-            <strong>75%</strong>
-            <small>Efectividad en duelos</small>
+            <small>{historyChallenges.length} disputados</small>
           </article>
         </section>
 
-        {/* Aviso de acción */}
-        {actionNotice ? (
-          <div className="auth-feedback" style={{ marginBottom: '20px' }} role="status">
-            <Check size={18} weight="bold" />
-            <span>{actionNotice}</span>
-          </div>
-        ) : null}
-
-        {/* Pestañas de Navegación de Retos */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
-          <div className="neo-tabs">
+        {/* Barra de Acciones y Pestañas */}
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: '24px',
+            gap: '16px',
+            flexWrap: 'wrap',
+          }}
+        >
+          <div className="period-tabs" role="tablist">
             <button
               type="button"
               className={activeTab === 'active' ? 'is-active' : ''}
               onClick={() => setActiveTab('active')}
+              role="tab"
+              aria-selected={activeTab === 'active'}
             >
-              <Flame size={16} weight="bold" style={{ marginRight: '6px' }} />
               Activos ({activeChallenges.length})
             </button>
             <button
               type="button"
               className={activeTab === 'pending' ? 'is-active' : ''}
               onClick={() => setActiveTab('pending')}
+              role="tab"
+              aria-selected={activeTab === 'pending'}
             >
-              <Clock size={16} weight="bold" style={{ marginRight: '6px' }} />
               Invitaciones ({pendingChallenges.length})
             </button>
             <button
               type="button"
               className={activeTab === 'history' ? 'is-active' : ''}
               onClick={() => setActiveTab('history')}
+              role="tab"
+              aria-selected={activeTab === 'history'}
             >
-              <FlagCheckered size={16} weight="bold" style={{ marginRight: '6px' }} />
               Historial ({historyChallenges.length})
             </button>
           </div>
+
+          <Link
+            href="/retos/nuevo"
+            className="create-button"
+            style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}
+          >
+            <Plus size={18} weight="bold" />
+            <span>Crear Reto</span>
+          </Link>
         </div>
 
-        {/* Lista de Tarjetas de Retos */}
-        {displayedList.length === 0 ? (
-          <section className="panel" style={{ padding: '48px 24px', textAlign: 'center' }}>
-            <div className="rank-emblem" style={{ width: '64px', height: '64px', margin: '0 auto 16px' }}>
-              <Sword size={36} weight="fill" />
+        {actionNotice ? (
+          <div className="auth-feedback" style={{ marginBottom: '20px' }}>
+            <Check size={18} weight="bold" />
+            <span>{actionNotice}</span>
+          </div>
+        ) : null}
+
+        {/* Listado de Retos */}
+        {!loading && displayedList.length === 0 ? (
+          <section
+            className="panel"
+            style={{
+              padding: '60px 24px',
+              textAlign: 'center',
+              background: 'var(--surface-alt)',
+              border: '3px solid var(--line)',
+            }}
+          >
+            <div
+              style={{
+                width: '64px',
+                height: '64px',
+                margin: '0 auto 16px',
+                background: 'var(--surface)',
+                border: '2px solid var(--line)',
+                display: 'grid',
+                placeItems: 'center',
+                color: 'var(--muted)',
+              }}
+            >
+              <FlagCheckered size={36} weight="bold" />
             </div>
             <h3 style={{ margin: '0 0 8px', font: '900 20px/1 var(--font-display)', textTransform: 'uppercase' }}>
               No hay retos en esta sección
@@ -405,189 +428,219 @@ export function ChallengesListView() {
                       alignItems: 'center',
                       justifyContent: 'space-between',
                       flexWrap: 'wrap',
-                      gap: '12px',
+                      gap: '10px',
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                       {ch.type === 'lp' ? (
-                        <Trophy size={20} weight="bold" />
+                        <Trophy size={20} weight="fill" />
                       ) : ch.type === 'rank' ? (
-                        <ShieldChevron size={20} weight="bold" />
+                        <ShieldChevron size={20} weight="fill" />
                       ) : (
-                        <FlagCheckered size={20} weight="bold" />
+                        <FlagCheckered size={20} weight="fill" />
                       )}
-                      <strong style={{ font: '900 14px/1 var(--font-display)', textTransform: 'uppercase', letterSpacing: '.04em' }}>
+                      <strong style={{ font: '900 16px/1 var(--font-display)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                         {ch.title}
                       </strong>
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                       {ch.status === 'active' ? (
                         <span
                           style={{
-                            font: '800 11px/1 var(--font-mono)',
-                            background: 'rgba(0, 0, 0, 0.4)',
-                            color: '#fff',
-                            border: '1px solid rgba(255, 255, 255, 0.3)',
-                            padding: '4px 8px',
-                            display: 'flex',
+                            font: '800 11px var(--font-mono)',
+                            display: 'inline-flex',
                             alignItems: 'center',
-                            gap: '6px',
+                            gap: '5px',
+                            background: 'rgba(0,0,0,0.3)',
+                            padding: '3px 8px',
+                            border: '1.5px solid currentColor',
                           }}
                         >
                           <Clock size={14} weight="bold" />
                           <span>{ch.daysRemaining} DÍAS RESTANTES</span>
                         </span>
-                      ) : ch.status === 'pending_acceptance' ? (
-                        <span className="profile-badge profile-badge-accent" style={{ fontSize: '10px' }}>
-                          INVITACIÓN PENDIENTE
+                      ) : ch.status === 'completed' ? (
+                        <span
+                          style={{
+                            font: '800 11px var(--font-mono)',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '5px',
+                            background: 'var(--accent)',
+                            color: 'var(--on-accent)',
+                            padding: '3px 8px',
+                            border: '1.5px solid var(--line)',
+                          }}
+                        >
+                          <Check size={14} weight="bold" />
+                          <span>COMPLETADO</span>
                         </span>
                       ) : (
-                        <span className="profile-badge" style={{ fontSize: '10px', background: 'var(--ink)', color: 'var(--surface)' }}>
-                          FINALIZADO · GANADOR: {ch.winnerName}
+                        <span
+                          style={{
+                            font: '800 11px var(--font-mono)',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '5px',
+                            background: 'var(--surface)',
+                            color: 'var(--ink)',
+                            padding: '3px 8px',
+                            border: '1.5px solid var(--line)',
+                          }}
+                        >
+                          <span>INVITACIÓN PENDIENTE</span>
                         </span>
                       )}
                     </div>
                   </div>
 
                   {/* Cuerpo del Reto */}
-                  <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                    {/* Objetivo y Recompensa */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+                  <div style={{ padding: '24px', display: 'grid', gap: '20px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '14px' }}>
                       <div>
-                        <span className="eyebrow" style={{ margin: 0 }}>Objetivo de victoria</span>
-                        <strong style={{ font: '900 16px/1.2 var(--font-display)', display: 'block', textTransform: 'uppercase', marginTop: '4px' }}>
+                        <span style={{ display: 'block', font: '800 10px var(--font-mono)', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '4px' }}>
+                          Objetivo de victoria
+                        </span>
+                        <strong style={{ font: '900 16px/1.2 var(--font-display)', textTransform: 'uppercase' }}>
                           {ch.targetMetric}
                         </strong>
                       </div>
 
                       {ch.reward ? (
-                        <div style={{ padding: '6px 12px', background: 'var(--surface-alt)', border: '2px solid var(--line)' }}>
-                          <small style={{ font: '700 9px var(--font-mono)', color: 'var(--muted)', textTransform: 'uppercase', display: 'block' }}>
+                        <div style={{ background: 'var(--surface-alt)', padding: '8px 14px', border: '2px solid var(--line)' }}>
+                          <span style={{ display: 'block', font: '800 9px var(--font-mono)', color: 'var(--muted)', textTransform: 'uppercase', marginBottom: '2px' }}>
                             Recompensa / Apuesta
-                          </small>
-                          <span style={{ font: '800 12px var(--font-mono)' }}>{ch.reward}</span>
+                          </span>
+                          <strong style={{ font: '800 12px var(--font-mono)' }}>
+                            {ch.reward}
+                          </strong>
                         </div>
                       ) : null}
                     </div>
 
-                    {/* Duelo de Participantes */}
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px' }}>
+                    {/* Participantes Cara a Cara */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
                       {ch.participants.map((p) => (
                         <div
                           key={p.id}
                           style={{
                             padding: '16px',
-                            background: p.isCurrentUser ? 'color-mix(in oklch, var(--accent) 8%, var(--surface))' : 'var(--surface-alt)',
                             border: '2px solid var(--line)',
-                            boxShadow: '3px 3px 0 var(--line)',
+                            background: 'var(--bg)',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '12px',
                           }}
                         >
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                              <div
-                                style={{
-                                  width: '38px',
-                                  height: '38px',
-                                  border: '2px solid var(--line)',
-                                  overflow: 'hidden',
-                                  background: 'var(--surface)',
-                                }}
-                              >
-                                {p.profileIconUrl ? (
-                                  <img src={p.profileIconUrl} alt="" width={38} height={38} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                ) : (
-                                  <div className="rank-emblem" style={{ width: '100%', height: '100%', border: 'none', boxShadow: 'none' }}>
-                                    <ShieldChevron size={20} weight="fill" />
-                                  </div>
-                                )}
-                              </div>
+                              {p.profileIconUrl ? (
+                                <div style={{ width: '38px', height: '38px', border: '2px solid var(--line)', overflow: 'hidden' }}>
+                                  <img src={p.profileIconUrl} alt={p.displayName} width={38} height={38} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                </div>
+                              ) : (
+                                <span className="avatar avatar-small">{p.displayName.slice(0, 2).toUpperCase()}</span>
+                              )}
                               <div>
-                                <strong style={{ font: '900 14px/1 var(--font-display)', textTransform: 'uppercase', display: 'block' }}>
+                                <strong style={{ font: '900 14px/1 var(--font-display)', textTransform: 'uppercase' }}>
                                   {p.displayName}
                                 </strong>
-                                <small style={{ font: '700 10px var(--font-mono)', color: 'var(--muted)' }}>
+                                <small style={{ font: '700 10px var(--font-mono)', color: 'var(--muted)', display: 'block', marginTop: '2px' }}>
                                   {p.tagLine} {p.isCurrentUser ? '(Tú)' : ''}
                                 </small>
                               </div>
                             </div>
 
-                            <strong style={{ font: '900 18px/1 var(--font-display)', color: p.isCurrentUser ? 'var(--accent-bright)' : 'var(--ink)' }}>
+                            <strong style={{ font: '900 18px var(--font-mono)', color: p.isCurrentUser ? 'var(--accent-bright)' : 'inherit' }}>
                               {p.currentValue} / {p.targetValue}
                             </strong>
                           </div>
 
-                          {/* Barra de Progreso */}
-                          <div style={{ width: '100%', height: '10px', background: 'var(--bg)', border: '2px solid var(--line)', overflow: 'hidden' }}>
-                            <div
-                              style={{
-                                width: `${Math.min(p.percentage, 100)}%`,
-                                height: '100%',
-                                background: p.isCurrentUser ? 'var(--accent)' : 'var(--ink)',
-                                transition: 'width 240ms ease',
-                              }}
-                            />
-                          </div>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px', font: '800 10px var(--font-mono)' }}>
-                            <span style={{ color: 'var(--muted)' }}>Progreso actual</span>
-                            <span>{p.percentage}%</span>
+                          {/* Barra de progreso */}
+                          <div>
+                            <div className="progress-track" style={{ height: '8px' }}>
+                              <span style={{ width: `${Math.min(100, Math.max(4, p.percentage))}%`, background: p.isCurrentUser ? 'var(--accent)' : 'var(--ink)' }} />
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px', font: '700 10px var(--font-mono)', color: 'var(--muted)' }}>
+                              <span>Progreso actual</span>
+                              <span>{p.percentage}%</span>
+                            </div>
                           </div>
                         </div>
                       ))}
                     </div>
 
-                    {/* Barra de Acciones y Ventaja */}
-                    <div
-                      style={{
-                        paddingTop: '16px',
-                        borderTop: '2px solid var(--line)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        flexWrap: 'wrap',
-                        gap: '12px',
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        {ch.status === 'active' && p1 && p2 ? (
-                          <span className="profile-badge profile-badge-accent" style={{ fontSize: '10px' }}>
-                            <Flame size={14} weight="fill" />
-                            <span>
-                              {isLeading
-                                ? `Vas liderando el reto (+${p1.currentValue - p2.currentValue} pts)`
-                                : `${p2.displayName} va liderando (+${p2.currentValue - p1.currentValue} pts)`}
-                            </span>
+                    {/* Estado de ventaja o acciones */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', borderTop: '2px solid var(--line)', paddingTop: '16px' }}>
+                      {ch.status === 'active' && p1 && p2 ? (
+                        <span
+                          style={{
+                            font: '800 11px var(--font-mono)',
+                            color: isLeading ? 'var(--ink)' : 'var(--accent-bright)',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            background: 'var(--surface-alt)',
+                            padding: '6px 12px',
+                            border: '1.5px solid var(--line)',
+                          }}
+                        >
+                          <Flame size={16} weight="fill" />
+                          <span>
+                            {isLeading
+                              ? `¡Vas liderando el duelo por +${p1.currentValue - p2.currentValue} pts!`
+                              : `${p2.displayName} va liderando (+${p2.currentValue - p1.currentValue} pts)`}
                           </span>
-                        ) : null}
-                      </div>
+                        </span>
+                      ) : ch.status === 'completed' ? (
+                        <span
+                          style={{
+                            font: '800 11px var(--font-mono)',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            background: 'var(--surface-alt)',
+                            padding: '6px 12px',
+                            border: '1.5px solid var(--line)',
+                          }}
+                        >
+                          <Trophy size={16} weight="fill" />
+                          <span>Ganador: <strong>{ch.winnerName || 'Reto Finalizado'}</strong></span>
+                        </span>
+                      ) : (
+                        <span style={{ font: '800 11px var(--font-mono)', color: 'var(--muted)' }}>
+                          ¿Aceptas el reto de tu rival?
+                        </span>
+                      )}
 
                       <div style={{ display: 'flex', gap: '10px' }}>
-                        {ch.status === 'pending_acceptance' && !ch.createdByMe ? (
+                        {ch.status === 'pending_acceptance' ? (
                           <>
-                            <button
-                              type="button"
-                              onClick={() => handleAccept(ch.id)}
-                              className="create-button"
-                              style={{ minHeight: '38px', margin: 0, padding: '0 16px', fontSize: '11px' }}
-                            >
-                              <Check size={16} weight="bold" />
-                              <span>Aceptar Reto</span>
-                            </button>
                             <button
                               type="button"
                               onClick={() => handleReject(ch.id)}
                               className="secondary-button"
-                              style={{ minHeight: '38px', padding: '0 16px', fontSize: '11px', background: 'var(--surface)' }}
+                              style={{ padding: '0 14px', fontSize: '11px' }}
                             >
-                              <X size={16} weight="bold" />
+                              <X size={15} weight="bold" />
                               <span>Rechazar</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleAccept(ch.id)}
+                              className="create-button"
+                              style={{ margin: 0, padding: '0 16px', fontSize: '11px' }}
+                            >
+                              <Check size={16} weight="bold" />
+                              <span>Aceptar Reto</span>
                             </button>
                           </>
                         ) : (
                           <Link
-                            href="/comparar"
+                            href={`/comparar?summoner=${encodeURIComponent(p2?.displayName || '')}&tag=${encodeURIComponent(p2?.tagLine?.replace('#', '') || '')}`}
                             className="secondary-button"
-                            style={{ minHeight: '38px', padding: '0 16px', fontSize: '11px', display: 'inline-flex', textDecoration: 'none' }}
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', textDecoration: 'none', padding: '0 14px', fontSize: '11px' }}
                           >
                             <ArrowsLeftRight size={16} weight="bold" />
                             <span>Ver Análisis Cara a Cara</span>
