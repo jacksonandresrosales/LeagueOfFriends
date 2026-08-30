@@ -4,6 +4,7 @@ import {
   Check,
   Clock,
   MagnifyingGlass,
+  Spinner,
   Trash,
   UserCheck,
   UserMinus,
@@ -12,7 +13,7 @@ import {
   Warning,
   X,
 } from '@phosphor-icons/react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { AppSidebar } from '@/components/shared/app-sidebar';
 import { ThemeToggle } from '@/components/shared/theme-toggle';
@@ -30,11 +31,13 @@ interface FriendshipItem {
   };
 }
 
-interface SearchUser {
+interface SearchResultItem {
   id: string;
   displayName: string;
-  avatarUrl: string | null;
-  friendshipStatus?: 'accepted' | 'pending_sent' | 'pending_received' | 'none';
+  gameName?: string;
+  tagLine?: string;
+  platform?: string;
+  status: 'none' | 'pending_sent' | 'pending_received' | 'accepted';
   friendshipId?: number;
 }
 
@@ -44,16 +47,18 @@ export function FriendsView() {
   const [friendships, setFriendships] = useState<FriendshipItem[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Búsqueda
+  // Búsqueda en vivo (Live suggestions)
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<SearchUser[]>([]);
-  const [searching, setSearching] = useState(false);
+  const [suggestions, setSuggestions] = useState<SearchResultItem[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
+
   const [actionFeedback, setActionFeedback] = useState<{ message: string; isError?: boolean } | null>(null);
 
   const loadFriendships = useCallback(async (userId: string) => {
     const supabase = getSupabaseClient();
 
-    // Consultar amistades donde el usuario sea requester o addressee
     const { data, error } = await supabase
       .from('friendships')
       .select(`
@@ -109,51 +114,62 @@ export function FriendsView() {
     void init();
   }, [loadFriendships]);
 
-  // Buscar usuarios
-  async function handleSearch(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    if (!searchQuery.trim() || !currentUserId) return;
-
-    setSearching(true);
-    setActionFeedback(null);
-    const supabase = getSupabaseClient();
-
-    const { data: users, error } = await supabase
-      .from('profiles')
-      .select('id, display_name, avatar_url')
-      .neq('id', currentUserId)
-      .ilike('display_name', `%${searchQuery.trim()}%`)
-      .limit(8);
-
-    if (error || !users) {
-      setSearchResults([]);
-      setSearching(false);
-      return;
+  // Cerrar el dropdown al hacer click fuera
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
+        setShowDropdown(false);
+      }
     }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
-    // Mapear con estado de amistad existente
-    const mapped: SearchUser[] = users.map((u) => {
-      const existing = friendships.find((f) => f.friend.id === u.id);
-      let status: SearchUser['friendshipStatus'] = 'none';
+  function handleSearchChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const val = e.target.value;
+    setSearchQuery(val);
+    if (val.trim().length < 2) {
+      setSuggestions([]);
+      setShowDropdown(false);
+      setIsSearching(false);
+    }
+  }
 
-      if (existing) {
-        if (existing.status === 'accepted') status = 'accepted';
-        else if (existing.isSender) status = 'pending_sent';
-        else status = 'pending_received';
+  // Búsqueda en vivo tipo LeagueOfGraphs / OP.GG con debounce de 250ms
+  useEffect(() => {
+    const q = searchQuery.trim();
+    if (q.length < 2) return;
+
+    const timeoutId = setTimeout(async () => {
+      setIsSearching(true);
+      const supabase = getSupabaseClient();
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+
+      if (!token) {
+        setIsSearching(false);
+        return;
       }
 
-      return {
-        id: u.id,
-        displayName: u.display_name,
-        avatarUrl: u.avatar_url,
-        friendshipStatus: status,
-        friendshipId: existing?.id,
-      };
-    });
+      try {
+        const res = await fetch(`/api/friends/search?q=${encodeURIComponent(q)}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
 
-    setSearchResults(mapped);
-    setSearching(false);
-  }
+        if (res.ok) {
+          const json = await res.json();
+          setSuggestions(json.results || []);
+          setShowDropdown(true);
+        }
+      } catch {
+        // Fallback silencioso
+      } finally {
+        setIsSearching(false);
+      }
+    }, 250);
+
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery]);
 
   // Enviar solicitud de amistad
   async function sendFriendRequest(targetUserId: string) {
@@ -173,8 +189,8 @@ export function FriendsView() {
 
     setActionFeedback({ message: '¡Solicitud de amistad enviada con éxito!' });
     void loadFriendships(currentUserId);
-    setSearchResults((prev) =>
-      prev.map((u) => (u.id === targetUserId ? { ...u, friendshipStatus: 'pending_sent' } : u)),
+    setSuggestions((prev) =>
+      prev.map((u) => (u.id === targetUserId ? { ...u, status: 'pending_sent' } : u)),
     );
   }
 
@@ -195,6 +211,9 @@ export function FriendsView() {
 
     setActionFeedback({ message: '¡Solicitud aceptada! Ahora están en el mismo círculo.' });
     void loadFriendships(currentUserId);
+    setSuggestions((prev) =>
+      prev.map((u) => (u.friendshipId === friendshipId ? { ...u, status: 'accepted' } : u)),
+    );
   }
 
   // Rechazar o eliminar amistad
@@ -211,6 +230,9 @@ export function FriendsView() {
 
     setActionFeedback({ message });
     void loadFriendships(currentUserId);
+    setSuggestions((prev) =>
+      prev.map((u) => (u.friendshipId === friendshipId ? { ...u, status: 'none', friendshipId: undefined } : u)),
+    );
   }
 
   const acceptedFriends = friendships.filter((f) => f.status === 'accepted');
@@ -241,107 +263,155 @@ export function FriendsView() {
           </p>
         </div>
 
-        {/* Buscador de Invocadores */}
+        {/* Buscador de Invocadores con Sugerencias en Vivo (Live Autocomplete) */}
         <section className="form-section" style={{ marginBottom: '28px' }}>
           <div className="form-section-heading">
             <span><MagnifyingGlass size={20} weight="bold" /></span>
             <div>
               <h3>Buscar invocadores</h3>
-              <p>Encuentra a otros jugadores por su nombre de usuario para agregarlos a tu círculo.</p>
+              <p>Escribe el nombre de usuario o Riot ID para ver sugerencias en tiempo real.</p>
             </div>
           </div>
 
-          <form onSubmit={handleSearch} style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-            <div style={{ flex: '1 1 300px' }}>
+          <div ref={searchContainerRef} style={{ position: 'relative', width: '100%' }}>
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
               <input
                 type="text"
-                placeholder="Nombre de usuario..."
+                placeholder="Escribe un nombre de usuario o Riot ID (ej. jacksON...)"
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={handleSearchChange}
+                onFocus={() => {
+                  if (suggestions.length > 0) setShowDropdown(true);
+                }}
                 style={{
                   width: '100%',
-                  height: '49px',
+                  height: '52px',
                   border: '2px solid var(--line)',
                   background: 'var(--bg)',
-                  padding: '0 14px',
+                  padding: '0 48px 0 16px',
                   font: '700 14px var(--font-sans)',
                   color: 'var(--ink)',
                 }}
               />
-            </div>
-            <button
-              type="submit"
-              className="create-button"
-              style={{ margin: 0, padding: '0 24px', minHeight: '49px' }}
-              disabled={searching}
-            >
-              {searching ? 'Buscando...' : 'Buscar'}
-            </button>
-          </form>
-
-          {/* Resultados de Búsqueda */}
-          {searchResults.length > 0 ? (
-            <div style={{ marginTop: '20px', borderTop: '2px solid var(--line)', paddingTop: '16px' }}>
-              <p className="eyebrow" style={{ marginBottom: '12px' }}>Resultados de la búsqueda ({searchResults.length})</p>
-              <div style={{ display: 'grid', gap: '10px' }}>
-                {searchResults.map((user) => (
-                  <div
-                    key={user.id}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      padding: '12px 16px',
-                      border: '2px solid var(--line)',
-                      background: 'var(--surface-alt)',
-                      gap: '14px',
-                      flexWrap: 'wrap',
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <span className="avatar avatar-small" style={{ width: '38px', height: '38px' }}>
-                        {user.displayName.slice(0, 2).toUpperCase()}
-                      </span>
-                      <strong style={{ font: '800 16px/1 var(--font-display)', textTransform: 'uppercase' }}>
-                        {user.displayName}
-                      </strong>
-                    </div>
-
-                    <div>
-                      {user.friendshipStatus === 'accepted' ? (
-                        <span className="profile-badge profile-badge-accent">
-                          <Check size={14} weight="bold" /> Amigos
-                        </span>
-                      ) : user.friendshipStatus === 'pending_sent' ? (
-                        <span className="profile-badge">
-                          <Clock size={14} weight="bold" /> Solicitud enviada
-                        </span>
-                      ) : user.friendshipStatus === 'pending_received' ? (
-                        <button
-                          type="button"
-                          className="secondary-button"
-                          style={{ minHeight: '36px', fontSize: '12px', padding: '0 12px' }}
-                          onClick={() => user.friendshipId && acceptFriendRequest(user.friendshipId)}
-                        >
-                          Aceptar solicitud
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          className="create-challenge-submit"
-                          style={{ margin: 0, minHeight: '38px', padding: '0 16px', fontSize: '13px' }}
-                          onClick={() => sendFriendRequest(user.id)}
-                        >
-                          <UserPlus size={16} weight="bold" />
-                          <span>Añadir amigo</span>
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                ))}
+              <div
+                style={{
+                  position: 'absolute',
+                  right: '16px',
+                  display: 'grid',
+                  placeItems: 'center',
+                  color: 'var(--muted)',
+                }}
+              >
+                {isSearching ? (
+                  <Spinner size={20} weight="bold" className="animate-spin" />
+                ) : (
+                  <MagnifyingGlass size={20} weight="bold" />
+                )}
               </div>
             </div>
-          ) : null}
+
+            {/* Dropdown de Sugerencias en Vivo */}
+            {showDropdown ? (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: 'calc(100% + 6px)',
+                  left: 0,
+                  right: 0,
+                  border: '3px solid var(--line)',
+                  background: 'var(--surface)',
+                  boxShadow: 'var(--hard-shadow)',
+                  zIndex: 50,
+                  maxHeight: '380px',
+                  overflowY: 'auto',
+                }}
+              >
+                {suggestions.length === 0 ? (
+                  <div style={{ padding: '18px', textAlign: 'center', color: 'var(--muted)', font: '700 12px var(--font-mono)' }}>
+                    NO SE ENCONTRARON INVOCADORES CON &quot;{searchQuery}&quot;
+                  </div>
+                ) : (
+                  <div>
+                    <div
+                      style={{
+                        padding: '10px 16px',
+                        background: 'var(--surface-alt)',
+                        borderBottom: '2px solid var(--line)',
+                        font: '800 10px/1 var(--font-mono)',
+                        textTransform: 'uppercase',
+                        color: 'var(--muted)',
+                        letterSpacing: '.08em',
+                      }}
+                    >
+                      Sugerencias de invocadores ({suggestions.length})
+                    </div>
+                    {suggestions.map((item) => (
+                      <div
+                        key={item.id}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          padding: '14px 18px',
+                          borderBottom: '2px solid var(--line)',
+                          gap: '14px',
+                          flexWrap: 'wrap',
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          <span
+                            className="avatar avatar-small"
+                            style={{ width: '42px', height: '42px', fontSize: '15px' }}
+                          >
+                            {(item.gameName || item.displayName).slice(0, 2).toUpperCase()}
+                          </span>
+                          <div>
+                            <strong style={{ font: '900 17px/1 var(--font-display)', textTransform: 'uppercase', display: 'block' }}>
+                              {item.gameName || item.displayName}
+                            </strong>
+                            <small style={{ color: 'var(--muted)', font: '700 10px/1.2 var(--font-mono)', textTransform: 'uppercase' }}>
+                              {item.tagLine ? `#${item.tagLine}` : ''} {item.platform ? `(${item.platform})` : ''}
+                            </small>
+                          </div>
+                        </div>
+
+                        <div>
+                          {item.status === 'accepted' ? (
+                            <span className="profile-badge profile-badge-accent">
+                              <Check size={14} weight="bold" /> Amigos
+                            </span>
+                          ) : item.status === 'pending_sent' ? (
+                            <span className="profile-badge">
+                              <Clock size={14} weight="bold" /> Solicitud enviada
+                            </span>
+                          ) : item.status === 'pending_received' ? (
+                            <button
+                              type="button"
+                              className="secondary-button"
+                              style={{ minHeight: '36px', fontSize: '12px', padding: '0 14px' }}
+                              onClick={() => item.friendshipId && acceptFriendRequest(item.friendshipId)}
+                            >
+                              Aceptar solicitud
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              className="create-challenge-submit"
+                              style={{ margin: 0, minHeight: '36px', padding: '0 16px', fontSize: '12px', boxShadow: '3px 3px 0 var(--line)' }}
+                              onClick={() => sendFriendRequest(item.id)}
+                            >
+                              <UserPlus size={16} weight="bold" />
+                              <span>Añadir</span>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : null}
+          </div>
 
           {actionFeedback ? (
             <div
