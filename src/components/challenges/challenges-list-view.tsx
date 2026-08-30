@@ -392,10 +392,6 @@ export function ChallengesListView() {
                     overflow: 'hidden',
                     display: 'flex',
                     flexDirection: 'column',
-                    outline: ch.id === targetId ? '4px solid var(--accent-bright)' : undefined,
-                    outlineOffset: ch.id === targetId ? '4px' : undefined,
-                    boxShadow: ch.id === targetId ? '8px 8px 0 var(--line)' : undefined,
-                    transition: 'all 240ms ease',
                   }}
                 >
                   {/* Cabecera del Reto */}
