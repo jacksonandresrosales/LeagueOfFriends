@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 'use client';
 
 import {
@@ -44,6 +45,9 @@ interface PlayerStats {
   topChampionName?: string;
   topChampionPoints?: number;
   hasRiotAccount: boolean;
+  profileIconUrl?: string;
+  splashArtUrl?: string;
+  summonerLevel?: number;
 }
 
 const mockDemoRival: PlayerStats = {
@@ -59,6 +63,9 @@ const mockDemoRival: PlayerStats = {
   topChampionName: 'Yasuo',
   topChampionPoints: 642000,
   hasRiotAccount: true,
+  profileIconUrl: 'https://ddragon.leagueoflegends.com/cdn/15.4.1/img/profileicon/3554.png',
+  splashArtUrl: 'https://ddragon.leagueoflegends.com/cdn/img/champion/splash/Yasuo_0.jpg',
+  summonerLevel: 312,
 };
 
 const periodChartData: Record<Period, { playerPath: string; rivalPath: string; playerPoints: number; rivalPoints: number; dates: string[] }> = {
@@ -129,9 +136,12 @@ export function CompareView() {
         snap = snapData;
       }
 
-      // 2. Cargar resumen real de Riot si tiene cuenta vinculada
+      // 2. Cargar resumen enriquecido de Riot (banner, icono, nivel)
       let topChampName: string | undefined;
       let topChampPoints: number | undefined;
+      let profileIconUrl: string | undefined;
+      let splashArtUrl: string | undefined;
+      let summonerLevel: number | undefined;
 
       if (riotAccount) {
         try {
@@ -145,6 +155,9 @@ export function CompareView() {
               const summary = await summaryRes.json();
               topChampName = summary.topChampion?.name;
               topChampPoints = summary.topChampion?.points;
+              profileIconUrl = summary.profileIconUrl;
+              splashArtUrl = summary.splashArtUrl;
+              summonerLevel = summary.summonerLevel;
             }
           }
         } catch {
@@ -170,6 +183,9 @@ export function CompareView() {
           topChampionName: topChampName,
           topChampionPoints: topChampPoints,
           hasRiotAccount: !!riotAccount,
+          profileIconUrl,
+          splashArtUrl,
+          summonerLevel,
         });
       }
 
@@ -384,12 +400,35 @@ export function CompareView() {
           </div>
         </section>
 
-        {/* Tarjetas Cara a Cara (Versus) */}
+        {/* Tarjetas Cara a Cara (Versus) con Banner y Fotos Oficiales */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', marginBottom: '32px' }}>
           {/* Jugador 1 (Tú) */}
-          <article className="panel" style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+          <article
+            className="panel"
+            style={{
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
+              position: 'relative',
+              backgroundImage: p1.splashArtUrl ? `url(${p1.splashArtUrl})` : undefined,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center 20%',
+            }}
+          >
+            {/* Máscara de contraste */}
             <div
               style={{
+                position: 'absolute',
+                inset: 0,
+                background: 'linear-gradient(180deg, rgba(0, 0, 0, 0.84) 0%, rgba(0, 0, 0, 0.93) 100%)',
+                zIndex: 1,
+              }}
+            />
+
+            <div
+              style={{
+                position: 'relative',
+                zIndex: 2,
                 padding: '12px 20px',
                 background: 'var(--accent)',
                 color: 'var(--on-accent)',
@@ -418,39 +457,102 @@ export function CompareView() {
               </span>
             </div>
 
-            <div style={{ padding: '24px', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '20px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                <div className="rank-emblem" style={{ width: '68px', height: '68px', flexShrink: 0 }}>
-                  <ShieldChevron size={52} weight="fill" />
-                  <span style={{ fontSize: '15px' }}>{getRankInitials(p1.division)}</span>
+            <div
+              style={{
+                position: 'relative',
+                zIndex: 2,
+                padding: '24px',
+                flex: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                gap: '20px',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '18px' }}>
+                <div
+                  style={{
+                    position: 'relative',
+                    width: '74px',
+                    height: '74px',
+                    flexShrink: 0,
+                    border: '3px solid var(--line)',
+                    background: 'var(--surface)',
+                    boxShadow: '4px 4px 0 var(--line)',
+                    overflow: 'hidden',
+                  }}
+                >
+                  {p1.profileIconUrl ? (
+                    <img
+                      src={p1.profileIconUrl}
+                      alt={p1.displayName}
+                      width={74}
+                      height={74}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                    />
+                  ) : (
+                    <div className="rank-emblem" style={{ width: '100%', height: '100%', border: 'none', boxShadow: 'none' }}>
+                      <ShieldChevron size={48} weight="fill" />
+                      <span style={{ fontSize: '14px' }}>{getRankInitials(p1.division)}</span>
+                    </div>
+                  )}
+                  {p1.summonerLevel ? (
+                    <span className="profile-banner-level">
+                      NVL {p1.summonerLevel}
+                    </span>
+                  ) : null}
                 </div>
+
                 <div>
-                  <h3 style={{ margin: 0, font: '900 24px/1 var(--font-display)', textTransform: 'uppercase' }}>
-                    {p1.displayName} <span style={{ color: 'var(--muted)', fontSize: '14px' }}>{p1.tagLine}</span>
+                  <h3 style={{ margin: 0, font: '900 24px/1 var(--font-display)', textTransform: 'uppercase', color: '#fff', textShadow: '2px 2px 0 #000' }}>
+                    {p1.displayName} <span style={{ color: 'var(--accent-bright)', fontSize: '14px' }}>{p1.tagLine}</span>
                   </h3>
-                  <p style={{ margin: '6px 0 0', font: '800 13px var(--font-mono)', textTransform: 'uppercase' }}>
-                    {formatTierName(p1.tier, p1.division)} · <strong>{p1.lp} LP</strong>
+                  <p style={{ margin: '6px 0 0', font: '800 13px var(--font-mono)', textTransform: 'uppercase', color: '#eee' }}>
+                    {formatTierName(p1.tier, p1.division)} · <strong style={{ color: '#fff' }}>{p1.lp} LP</strong>
                   </p>
                 </div>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div style={{ padding: '12px 14px', background: 'var(--surface-alt)', border: '2px solid var(--line)', boxShadow: '2px 2px 0 var(--line)' }}>
-                  <small style={{ display: 'block', font: '700 9px var(--font-mono)', color: 'var(--muted)', textTransform: 'uppercase' }}>Win Rate</small>
-                  <strong style={{ font: '900 22px/1.2 var(--font-display)' }}>{p1.winRate}%</strong>
+                <div style={{ padding: '12px 14px', background: 'rgba(0, 0, 0, 0.75)', border: '2px solid var(--line)', boxShadow: '2px 2px 0 var(--line)' }}>
+                  <small style={{ display: 'block', font: '700 9px var(--font-mono)', color: '#aaa', textTransform: 'uppercase' }}>Win Rate</small>
+                  <strong style={{ font: '900 22px/1.2 var(--font-display)', color: '#fff' }}>{p1.winRate}%</strong>
                 </div>
-                <div style={{ padding: '12px 14px', background: 'var(--surface-alt)', border: '2px solid var(--line)', boxShadow: '2px 2px 0 var(--line)' }}>
-                  <small style={{ display: 'block', font: '700 9px var(--font-mono)', color: 'var(--muted)', textTransform: 'uppercase' }}>Partidas</small>
-                  <strong style={{ font: '900 22px/1.2 var(--font-display)' }}>{p1.totalGames}</strong>
+                <div style={{ padding: '12px 14px', background: 'rgba(0, 0, 0, 0.75)', border: '2px solid var(--line)', boxShadow: '2px 2px 0 var(--line)' }}>
+                  <small style={{ display: 'block', font: '700 9px var(--font-mono)', color: '#aaa', textTransform: 'uppercase' }}>Partidas</small>
+                  <strong style={{ font: '900 22px/1.2 var(--font-display)', color: '#fff' }}>{p1.totalGames}</strong>
                 </div>
               </div>
             </div>
           </article>
 
           {/* Jugador 2 (Rival) */}
-          <article className="panel" style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+          <article
+            className="panel"
+            style={{
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
+              position: 'relative',
+              backgroundImage: p2.splashArtUrl ? `url(${p2.splashArtUrl})` : undefined,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center 20%',
+            }}
+          >
+            {/* Máscara de contraste */}
             <div
               style={{
+                position: 'absolute',
+                inset: 0,
+                background: 'linear-gradient(180deg, rgba(0, 0, 0, 0.84) 0%, rgba(0, 0, 0, 0.93) 100%)',
+                zIndex: 1,
+              }}
+            />
+
+            <div
+              style={{
+                position: 'relative',
+                zIndex: 2,
                 padding: '12px 20px',
                 background: 'var(--surface-alt)',
                 color: 'var(--ink)',
@@ -479,30 +581,70 @@ export function CompareView() {
               </span>
             </div>
 
-            <div style={{ padding: '24px', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '20px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                <div className="rank-emblem" style={{ width: '68px', height: '68px', background: 'var(--ink)', color: 'var(--surface)', flexShrink: 0 }}>
-                  <ShieldChevron size={52} weight="fill" />
-                  <span style={{ fontSize: '15px', color: 'var(--surface)' }}>{getRankInitials(p2.division)}</span>
+            <div
+              style={{
+                position: 'relative',
+                zIndex: 2,
+                padding: '24px',
+                flex: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                gap: '20px',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '18px' }}>
+                <div
+                  style={{
+                    position: 'relative',
+                    width: '74px',
+                    height: '74px',
+                    flexShrink: 0,
+                    border: '3px solid var(--line)',
+                    background: 'var(--surface)',
+                    boxShadow: '4px 4px 0 var(--line)',
+                    overflow: 'hidden',
+                  }}
+                >
+                  {p2.profileIconUrl ? (
+                    <img
+                      src={p2.profileIconUrl}
+                      alt={p2.displayName}
+                      width={74}
+                      height={74}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                    />
+                  ) : (
+                    <div className="rank-emblem" style={{ width: '100%', height: '100%', background: 'var(--ink)', color: 'var(--surface)', border: 'none', boxShadow: 'none' }}>
+                      <ShieldChevron size={48} weight="fill" />
+                      <span style={{ fontSize: '14px', color: 'var(--surface)' }}>{getRankInitials(p2.division)}</span>
+                    </div>
+                  )}
+                  {p2.summonerLevel ? (
+                    <span className="profile-banner-level">
+                      NVL {p2.summonerLevel}
+                    </span>
+                  ) : null}
                 </div>
+
                 <div>
-                  <h3 style={{ margin: 0, font: '900 24px/1 var(--font-display)', textTransform: 'uppercase' }}>
+                  <h3 style={{ margin: 0, font: '900 24px/1 var(--font-display)', textTransform: 'uppercase', color: '#fff', textShadow: '2px 2px 0 #000' }}>
                     {p2.displayName} <span style={{ color: 'var(--muted)', fontSize: '14px' }}>{p2.tagLine}</span>
                   </h3>
-                  <p style={{ margin: '6px 0 0', font: '800 13px var(--font-mono)', textTransform: 'uppercase' }}>
+                  <p style={{ margin: '6px 0 0', font: '800 13px var(--font-mono)', textTransform: 'uppercase', color: '#eee' }}>
                     {p2.hasRiotAccount ? `${formatTierName(p2.tier, p2.division)} · ${p2.lp} LP` : 'Sin cuenta de LoL vinculada'}
                   </p>
                 </div>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div style={{ padding: '12px 14px', background: 'var(--surface-alt)', border: '2px solid var(--line)', boxShadow: '2px 2px 0 var(--line)' }}>
-                  <small style={{ display: 'block', font: '700 9px var(--font-mono)', color: 'var(--muted)', textTransform: 'uppercase' }}>Win Rate</small>
-                  <strong style={{ font: '900 22px/1.2 var(--font-display)' }}>{p2.winRate}%</strong>
+                <div style={{ padding: '12px 14px', background: 'rgba(0, 0, 0, 0.75)', border: '2px solid var(--line)', boxShadow: '2px 2px 0 var(--line)' }}>
+                  <small style={{ display: 'block', font: '700 9px var(--font-mono)', color: '#aaa', textTransform: 'uppercase' }}>Win Rate</small>
+                  <strong style={{ font: '900 22px/1.2 var(--font-display)', color: '#fff' }}>{p2.winRate}%</strong>
                 </div>
-                <div style={{ padding: '12px 14px', background: 'var(--surface-alt)', border: '2px solid var(--line)', boxShadow: '2px 2px 0 var(--line)' }}>
-                  <small style={{ display: 'block', font: '700 9px var(--font-mono)', color: 'var(--muted)', textTransform: 'uppercase' }}>Partidas</small>
-                  <strong style={{ font: '900 22px/1.2 var(--font-display)' }}>{p2.totalGames}</strong>
+                <div style={{ padding: '12px 14px', background: 'rgba(0, 0, 0, 0.75)', border: '2px solid var(--line)', boxShadow: '2px 2px 0 var(--line)' }}>
+                  <small style={{ display: 'block', font: '700 9px var(--font-mono)', color: '#aaa', textTransform: 'uppercase' }}>Partidas</small>
+                  <strong style={{ font: '900 22px/1.2 var(--font-display)', color: '#fff' }}>{p2.totalGames}</strong>
                 </div>
               </div>
             </div>
