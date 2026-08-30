@@ -191,12 +191,14 @@ button:focus-visible, a:focus-visible { outline: 3px solid var(--accent-bright);
   bottom: 0;
   left: 0;
   right: 0;
-  background: var(--line);
+  background: var(--accent);
   color: var(--on-accent);
-  font: 800 9px/1.2 var(--font-mono), monospace;
+  border-top: 2px solid var(--line);
+  font: 800 10px/1.2 var(--font-mono), monospace;
   text-align: center;
-  padding: 2px 0;
+  padding: 3px 0;
   text-transform: uppercase;
+  letter-spacing: .05em;
 }
 .profile-banner-info {
   display: flex;
