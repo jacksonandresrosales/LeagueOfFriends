@@ -4,34 +4,36 @@ import {
   ArrowLeft,
   ArrowRight,
   Check,
+  CheckCircle,
   EnvelopeSimple,
   Eye,
   EyeSlash,
   Key,
   LockKey,
   ShieldCheck,
-  SignIn,
+  SpinnerGap,
   UserPlus,
+  WarningCircle,
 } from '@phosphor-icons/react';
 import { FormEvent, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { SummonerCaptcha } from '@/components/auth/summoner-captcha';
 import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
 
 type Mode = 'sign-in' | 'sign-up' | 'reset';
 type ResetStep = 'email' | 'otp' | 'password' | 'success';
+type EmailStatus = 'idle' | 'checking' | 'available' | 'registered';
 
 export function AuthForm() {
   const router = useRouter();
   const [mode, setMode] = useState<Mode>('sign-in');
   const [resetStep, setResetStep] = useState<ResetStep>('email');
-  const [recoveryEmail, setRecoveryEmail] = useState('');
+  const [inputEmail, setInputEmail] = useState('');
   const [registeredEmail, setRegisteredEmail] = useState('');
+  const [recoveryEmail, setRecoveryEmail] = useState('');
+  const [emailCheckStatus, setEmailCheckStatus] = useState<EmailStatus>('idle');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
-  const [captchaVerified, setCaptchaVerified] = useState(false);
-  const [emailAlreadyExists, setEmailAlreadyExists] = useState<string | null>(null);
   const [otpDigits, setOtpDigits] = useState<string[]>(['', '', '', '', '', '']);
   const otpInputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
@@ -49,13 +51,45 @@ export function AuthForm() {
     return () => clearInterval(timer);
   }, [resendCooldown]);
 
+  // Validación de disponibilidad de correo en tiempo real para modo registro
+  useEffect(() => {
+    if (mode !== 'sign-up') return;
+
+    const clean = inputEmail.trim().toLowerCase();
+    if (!clean || !clean.includes('@') || clean.length < 5 || !clean.includes('.')) {
+      const resetTimer = setTimeout(() => setEmailCheckStatus('idle'), 0);
+      return () => clearTimeout(resetTimer);
+    }
+
+    const timer = setTimeout(async () => {
+      setEmailCheckStatus('checking');
+      try {
+        const res = await fetch('/api/auth/check-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: clean }),
+        });
+        const data = await res.json();
+        if (data.exists) {
+          setEmailCheckStatus('registered');
+        } else {
+          setEmailCheckStatus('available');
+        }
+      } catch {
+        setEmailCheckStatus('idle');
+      }
+    }, 380);
+
+    return () => clearTimeout(timer);
+  }, [inputEmail, mode]);
+
   function changeMode(nextMode: Mode) {
     setMode(nextMode);
     setResetStep('email');
     setOtpDigits(['', '', '', '', '', '']);
     setShowPassword(false);
     setShowConfirmation(false);
-    setEmailAlreadyExists(null);
+    setEmailCheckStatus('idle');
     setMessage('');
     setError('');
   }
@@ -135,7 +169,7 @@ export function AuthForm() {
     }
 
     const formData = new FormData(event.currentTarget);
-    const email = String(formData.get('email') ?? '').trim();
+    const email = String(formData.get('email') ?? inputEmail).trim().toLowerCase();
     const password = String(formData.get('password') ?? '');
     const confirmation = String(formData.get('confirmation') ?? '');
 
@@ -232,6 +266,12 @@ export function AuthForm() {
 
       // 2. REGISTRO
       if (mode === 'sign-up') {
+        if (!email || !email.includes('@')) {
+          setError('Ingresa un correo electrónico válido.');
+          setSubmitting(false);
+          return;
+        }
+
         if (!password || password.length < 6) {
           setError('La contraseña debe tener al menos 6 caracteres.');
           setSubmitting(false);
@@ -244,13 +284,13 @@ export function AuthForm() {
           return;
         }
 
-        if (!captchaVerified) {
-          setError('Por favor, completa la verificación de seguridad de invocador.');
+        if (emailCheckStatus === 'registered') {
+          setError('Este correo ya está registrado. Por favor inicia sesión.');
           setSubmitting(false);
           return;
         }
 
-        // 2.1 Verificar si el correo ya existe antes de intentar registrarlo
+        // Comprobación rápida de respaldo
         try {
           const checkRes = await fetch('/api/auth/check-email', {
             method: 'POST',
@@ -259,13 +299,13 @@ export function AuthForm() {
           });
           const checkData = await checkRes.json();
           if (checkData.exists) {
-            setEmailAlreadyExists(email);
-            setError('');
+            setEmailCheckStatus('registered');
+            setError('Este correo ya está registrado. Inicia sesión para continuar.');
             setSubmitting(false);
             return;
           }
         } catch {
-          // Si la comprobación de red falla, el backend de Supabase responderá
+          // Continuar con Supabase
         }
 
         const { error: signUpError } = await supabase.auth.signUp({
@@ -279,22 +319,22 @@ export function AuthForm() {
             signUpError.message?.toLowerCase().includes('already registered') ||
             signUpError.message?.toLowerCase().includes('user already exists')
           ) {
-            setEmailAlreadyExists(email);
-            setError('');
+            setEmailCheckStatus('registered');
+            setError('Este correo ya está registrado. Inicia sesión para continuar.');
             setSubmitting(false);
             return;
           }
           throw signUpError;
         }
 
-        // Desconectamos cualquier sesión automática inmediata para dar el flujo de login manual solicitado
+        // Desconectamos cualquier sesión automática inmediata para forzar inicio de sesión manual
         await supabase.auth.signOut({ scope: 'local' });
         setRegisteredEmail(email);
+        setInputEmail(email);
         setMode('sign-in');
         setShowPassword(false);
         setShowConfirmation(false);
-        setCaptchaVerified(false);
-        setEmailAlreadyExists(null);
+        setEmailCheckStatus('idle');
         setMessage('¡Cuenta creada con éxito! Ahora inicia sesión con tu correo y contraseña.');
         setSubmitting(false);
         return;
@@ -317,356 +357,358 @@ export function AuthForm() {
 
   return (
     <main className="auth-page">
-      <aside className="auth-brand-panel">
-        <div className="brand">
+      <section className="auth-brand-panel">
+        <Link className="brand" href="/" aria-label="LeagueOfFriends, inicio">
           <span className="brand-mark">LF</span>
           <span className="brand-name">
-            LEAGUE<br />OF FRIENDS
+            LEAGUE
+            <br />
+            OF FRIENDS
           </span>
-        </div>
-
+        </Link>
         <div className="auth-brand-copy">
-          <p className="eyebrow">Compite con tu círculo cercano</p>
-          <h1>Domina la grieta con tus amigos.</h1>
+          <span className="section-index">00</span>
+          <p className="eyebrow">Acceso Competitivo</p>
+          <h1>Tu Círculo. Tu Nivel.</h1>
           <p>
-            Crea retos personalizados, compara estadísticas cara a cara y sigue tu ascenso en las clasificatorias con datos oficiales de Riot Games.
+            Compite con amigos, sigue tu progreso en tiempo real y participa en retos privados.
           </p>
         </div>
-
         <div className="auth-security-note">
-          <ShieldCheck size={20} weight="fill" />
-          <span>Datos en tiempo real · Riot Games API & Resend</span>
+          <ShieldCheck size={20} weight="bold" />
+          <span>Acceso seguro mediante encriptación bcrypt & Supabase</span>
         </div>
-      </aside>
+      </section>
 
       <section className="auth-form-panel">
         <div className="auth-form-wrap">
-      {mode === 'reset' && resetStep === 'otp' ? (
-        <>
-          <h2>Verifica el código</h2>
-          <p className="auth-description">
-            Ingresa el código de 6 dígitos que enviamos a <strong>{recoveryEmail}</strong>.
-          </p>
-        </>
-      ) : mode === 'reset' && resetStep === 'password' ? (
-        <>
-          <h2>Nueva contraseña</h2>
-          <p className="auth-description">
-            Crea una nueva contraseña segura para tu cuenta.
-          </p>
-        </>
-      ) : mode === 'reset' && resetStep === 'success' ? (
-        <>
-          <h2>¡Todo listo!</h2>
-          <p className="auth-description">
-            Tu contraseña ha sido actualizada exitosamente. Ya puedes iniciar sesión con tus nuevas credenciales.
-          </p>
-        </>
-      ) : mode === 'reset' ? (
-        <>
-          <h2>Recupera el acceso</h2>
-          <p className="auth-description">
-            Ingresa tu correo y te enviaremos un código de verificación de 6 dígitos a tu bandeja.
-          </p>
-        </>
-      ) : mode === 'sign-up' ? (
-        <>
-          <h2>Crea tu cuenta</h2>
-          <p className="auth-description">
-            Prepara tu perfil antes de vincular tu cuenta de League of Legends.
-          </p>
-        </>
-      ) : (
-        <>
-          <h2>Vuelve a la grieta</h2>
-          <p className="auth-description">
-            Entra para seguir tus retos y comparar tu progreso competitivo.
-          </p>
-        </>
-      )}
-
-      {message ? (
-        <div className="auth-feedback" role="status">
-          <ShieldCheck size={16} weight="bold" />
-          <span>{message}</span>
-        </div>
-      ) : null}
-
-      {error ? (
-        <div className="auth-feedback is-error" role="alert">
-          <ShieldCheck size={16} weight="bold" />
-          <span>{error}</span>
-        </div>
-      ) : null}
-
-      {mode === 'reset' && resetStep === 'success' ? (
-        <div style={{ marginTop: '24px' }}>
-          <button
-            type="button"
-            className="auth-submit"
-            onClick={() => changeMode('sign-in')}
-          >
-            <span>Iniciar sesión</span>
-            <ArrowRight size={18} weight="bold" />
-          </button>
-        </div>
-      ) : (
-        <form className="auth-form" onSubmit={handleSubmit}>
-          {mode === 'reset' && resetStep === 'otp' ? (
-            <div className="field-group">
-              <label className="eyebrow" htmlFor="otp-0">
-                Código de 6 dígitos
-              </label>
-              <div className="otp-inputs">
-                {otpDigits.map((digit, idx) => (
-                  <input
-                    key={idx}
-                    id={`otp-${idx}`}
-                    ref={(el) => {
-                      otpInputRefs.current[idx] = el;
-                    }}
-                    type="text"
-                    inputMode="numeric"
-                    maxLength={1}
-                    value={digit}
-                    onChange={(e) => handleOtpChange(idx, e.target.value)}
-                    onKeyDown={(e) => handleOtpKeyDown(idx, e)}
-                    onPaste={idx === 0 ? handleOtpPaste : undefined}
-                    className="otp-box"
-                    autoFocus={idx === 0}
-                  />
-                ))}
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px' }}>
-                <button
-                  type="button"
-                  onClick={handleResendCode}
-                  disabled={resendCooldown > 0 || submitting}
-                  className="auth-inline-link"
-                  style={{ margin: 0, opacity: resendCooldown > 0 ? 0.6 : 1, cursor: resendCooldown > 0 ? 'default' : 'pointer' }}
-                >
-                  {resendCooldown > 0 ? `Reenviar código en ${resendCooldown}s` : 'Reenviar código'}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setResetStep('email')}
-                  className="auth-inline-link"
-                  style={{ margin: 0 }}
-                >
-                  Cambiar correo
-                </button>
-              </div>
-            </div>
-          ) : mode === 'reset' && resetStep === 'password' ? (
-            <>
-              <div className="field-group">
-                <label className="eyebrow" htmlFor="auth-password">
-                  Nueva contraseña
-                </label>
-                <div className="auth-input">
-                  <LockKey size={18} weight="bold" />
-                  <input
-                    id="auth-password"
-                    name="password"
-                    type={showPassword ? 'text' : 'password'}
-                    placeholder="Mínimo 6 caracteres"
-                    autoComplete="new-password"
-                    required
-                  />
-                  <button
-                    type="button"
-                    className="auth-password-toggle"
-                    onClick={() => setShowPassword(!showPassword)}
-                    aria-label={showPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
-                    title={showPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
-                  >
-                    {showPassword ? <EyeSlash size={18} weight="bold" /> : <Eye size={18} weight="bold" />}
-                  </button>
-                </div>
-              </div>
-
-              <div className="field-group">
-                <label className="eyebrow" htmlFor="auth-confirmation">
-                  Confirmar nueva contraseña
-                </label>
-                <div className="auth-input">
-                  <Key size={18} weight="bold" />
-                  <input
-                    id="auth-confirmation"
-                    name="confirmation"
-                    type={showConfirmation ? 'text' : 'password'}
-                    placeholder="Repite la contraseña"
-                    autoComplete="new-password"
-                    required
-                  />
-                  <button
-                    type="button"
-                    className="auth-password-toggle"
-                    onClick={() => setShowConfirmation(!showConfirmation)}
-                    aria-label={showConfirmation ? 'Ocultar contraseña' : 'Ver contraseña'}
-                    title={showConfirmation ? 'Ocultar contraseña' : 'Ver contraseña'}
-                  >
-                    {showConfirmation ? <EyeSlash size={18} weight="bold" /> : <Eye size={18} weight="bold" />}
-                  </button>
-                </div>
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="field-group">
-                <label className="eyebrow" htmlFor="auth-email">
-                  Correo electrónico
-                </label>
-                <div className="auth-input">
-                  <EnvelopeSimple size={18} weight="bold" />
-                  <input
-                    id="auth-email"
-                    name="email"
-                    type="email"
-                    placeholder="tu@correo.com"
-                    autoComplete="email"
-                    defaultValue={registeredEmail || recoveryEmail}
-                    key={registeredEmail}
-                    required
-                  />
-                </div>
-              </div>
-
-              {mode !== 'reset' ? (
-                <div className="field-group">
-                  <label className="eyebrow" htmlFor="auth-password">
-                    Contraseña
-                  </label>
-                  <div className="auth-input">
-                    <LockKey size={18} weight="bold" />
-                    <input
-                      id="auth-password"
-                      name="password"
-                      type={showPassword ? 'text' : 'password'}
-                      placeholder="Tu contraseña secreta"
-                      autoComplete={mode === 'sign-in' ? 'current-password' : 'new-password'}
-                      required
-                    />
-                    <button
-                      type="button"
-                      className="auth-password-toggle"
-                      onClick={() => setShowPassword(!showPassword)}
-                      aria-label={showPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
-                      title={showPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
-                    >
-                      {showPassword ? <EyeSlash size={18} weight="bold" /> : <Eye size={18} weight="bold" />}
-                    </button>
-                  </div>
-                </div>
-              ) : null}
-
-              {mode === 'sign-up' ? (
-                <div className="field-group">
-                  <label className="eyebrow" htmlFor="auth-confirmation">
-                    Confirmar contraseña
-                  </label>
-                  <div className="auth-input">
-                    <LockKey size={18} weight="bold" />
-                    <input
-                      id="auth-confirmation"
-                      name="confirmation"
-                      type={showConfirmation ? 'text' : 'password'}
-                      placeholder="Repite la contraseña"
-                      autoComplete="new-password"
-                      required
-                    />
-                    <button
-                      type="button"
-                      className="auth-password-toggle"
-                      onClick={() => setShowConfirmation(!showConfirmation)}
-                      aria-label={showConfirmation ? 'Ocultar contraseña' : 'Ver contraseña'}
-                      title={showConfirmation ? 'Ocultar contraseña' : 'Ver contraseña'}
-                    >
-                      {showConfirmation ? <EyeSlash size={18} weight="bold" /> : <Eye size={18} weight="bold" />}
-                    </button>
-                  </div>
-                </div>
-              ) : null}
-            </>
-          )}
-
-          {emailAlreadyExists ? (
-            <div className="email-exists-card" role="alert">
-              <div className="email-exists-header">
-                <ShieldCheck size={20} weight="fill" />
-                <span>Correo ya registrado</span>
-              </div>
-              <p className="email-exists-desc">
-                El correo <strong>{emailAlreadyExists}</strong> ya tiene una cuenta activa en LeagueOfFriends.
-              </p>
-              <div className="email-exists-buttons">
-                <button
-                  type="button"
-                  className="email-exists-btn-login"
-                  onClick={() => {
-                    const mail = emailAlreadyExists;
-                    setEmailAlreadyExists(null);
-                    setRegisteredEmail(mail);
-                    changeMode('sign-in');
-                  }}
-                >
-                  <SignIn size={16} weight="bold" />
-                  <span>Iniciar sesión</span>
-                </button>
-                <button
-                  type="button"
-                  className="email-exists-btn-reset"
-                  onClick={() => {
-                    const mail = emailAlreadyExists;
-                    setEmailAlreadyExists(null);
-                    setRecoveryEmail(mail);
-                    changeMode('reset');
-                  }}
-                >
-                  <Key size={16} weight="bold" />
-                  <span>Recuperar clave</span>
-                </button>
-              </div>
-            </div>
-          ) : null}
-
-          {mode === 'sign-up' && !emailAlreadyExists ? (
-            <SummonerCaptcha
-              verified={captchaVerified}
-              onVerify={() => {
-                setCaptchaVerified(true);
-                setError('');
-              }}
-            />
-          ) : null}
-
-          <button className="auth-submit" type="submit" disabled={submitting}>
-            <span>
-              {submitting
-                ? 'Procesando...'
-                : mode === 'reset' && resetStep === 'otp'
-                  ? 'Continuar'
-                  : mode === 'reset' && resetStep === 'password'
-                    ? 'Guardar contraseña'
-                    : mode === 'reset'
-                      ? 'Enviar código'
-                      : mode === 'sign-up'
-                        ? 'Crear cuenta'
-                        : 'Iniciar sesión'}
+          <Link className="brand" href="/" aria-label="LeagueOfFriends, inicio">
+            <span className="brand-mark">LF</span>
+            <span className="brand-name">
+              LEAGUE
+              <br />
+              OF FRIENDS
             </span>
-            {mode === 'reset' && resetStep === 'password' ? (
-              <Check size={18} weight="bold" />
-            ) : mode === 'sign-up' ? (
-              <UserPlus size={18} weight="bold" />
-            ) : (
-              <ArrowRight size={18} weight="bold" />
-            )}
-          </button>
-        </form>
-      )}
+          </Link>
 
+          <header className="auth-header">
+            <span className="section-index">
+              {mode === 'sign-in' ? '01' : mode === 'sign-up' ? '02' : '03'}
+            </span>
+            <p className="eyebrow">
+              {mode === 'sign-in'
+                ? 'Iniciar sesión'
+                : mode === 'sign-up'
+                  ? 'Crear cuenta'
+                  : 'Recuperación de cuenta'}
+            </p>
+            <h2>
+              {mode === 'sign-in'
+                ? 'Entrar a la Grieta'
+                : mode === 'sign-up'
+                  ? 'Únete al Círculo'
+                  : resetStep === 'otp'
+                    ? 'Código de Verificación'
+                    : resetStep === 'password'
+                      ? 'Nueva Contraseña'
+                      : resetStep === 'success'
+                        ? 'Acceso Restablecido'
+                        : 'Recuperar Contraseña'}
+            </h2>
+            <p>
+              {mode === 'sign-in'
+                ? 'Ingresa tu correo y contraseña para ver tu rendimiento.'
+                : mode === 'sign-up'
+                  ? 'Crea tu perfil y comienza a medirte con tus amigos.'
+                  : resetStep === 'otp'
+                    ? 'Ingresa el código de 6 dígitos que enviamos a tu correo.'
+                    : resetStep === 'password'
+                      ? 'Establece una nueva contraseña segura para tu cuenta.'
+                      : resetStep === 'success'
+                        ? 'Tu contraseña ha sido actualizada. Ya puedes iniciar sesión.'
+                        : 'Te enviaremos un código de seguridad de 6 dígitos para recuperar tu acceso.'}
+            </p>
+          </header>
+
+          {message ? (
+            <div className="auth-feedback" role="status">
+              <Check size={16} weight="bold" />
+              <span>{message}</span>
+            </div>
+          ) : null}
+
+          {error ? (
+            <div className="auth-feedback is-error" role="alert">
+              <span>{error}</span>
+            </div>
+          ) : null}
+
+          {mode === 'reset' && resetStep === 'success' ? (
+            <div style={{ display: 'grid', gap: '16px', marginTop: '12px' }}>
+              <button
+                type="button"
+                className="auth-submit"
+                onClick={() => {
+                  changeMode('sign-in');
+                  setInputEmail(recoveryEmail);
+                }}
+              >
+                <span>Iniciar sesión ahora</span>
+                <ArrowRight size={18} weight="bold" />
+              </button>
+            </div>
+          ) : (
+            <form className="auth-form" onSubmit={handleSubmit}>
+              {mode === 'reset' && resetStep === 'otp' ? (
+                <div className="field-group">
+                  <label className="eyebrow" htmlFor="otp-0">
+                    Código de 6 dígitos
+                  </label>
+                  <div className="otp-inputs">
+                    {otpDigits.map((digit, idx) => (
+                      <input
+                        key={idx}
+                        id={`otp-${idx}`}
+                        ref={(el) => {
+                          otpInputRefs.current[idx] = el;
+                        }}
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={1}
+                        value={digit}
+                        onChange={(e) => handleOtpChange(idx, e.target.value)}
+                        onKeyDown={(e) => handleOtpKeyDown(idx, e)}
+                        onPaste={idx === 0 ? handleOtpPaste : undefined}
+                        className="otp-box"
+                        autoFocus={idx === 0}
+                        required
+                      />
+                    ))}
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px' }}>
+                    <button
+                      type="button"
+                      onClick={handleResendCode}
+                      disabled={resendCooldown > 0 || submitting}
+                      className="auth-inline-link"
+                      style={{ margin: 0, opacity: resendCooldown > 0 ? 0.6 : 1, cursor: resendCooldown > 0 ? 'default' : 'pointer' }}
+                    >
+                      {resendCooldown > 0 ? `Reenviar código en ${resendCooldown}s` : 'Reenviar código'}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setResetStep('email')}
+                      className="auth-inline-link"
+                      style={{ margin: 0 }}
+                    >
+                      Cambiar correo
+                    </button>
+                  </div>
+                </div>
+              ) : mode === 'reset' && resetStep === 'password' ? (
+                <>
+                  <div className="field-group">
+                    <label className="eyebrow" htmlFor="auth-password">
+                      Nueva contraseña
+                    </label>
+                    <div className="auth-input">
+                      <LockKey size={18} weight="bold" />
+                      <input
+                        id="auth-password"
+                        name="password"
+                        type={showPassword ? 'text' : 'password'}
+                        placeholder="Mínimo 6 caracteres"
+                        autoComplete="new-password"
+                        required
+                      />
+                      <button
+                        type="button"
+                        className="auth-password-toggle"
+                        onClick={() => setShowPassword(!showPassword)}
+                        aria-label={showPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
+                        title={showPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
+                      >
+                        {showPassword ? <EyeSlash size={18} weight="bold" /> : <Eye size={18} weight="bold" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="field-group">
+                    <label className="eyebrow" htmlFor="auth-confirmation">
+                      Confirmar nueva contraseña
+                    </label>
+                    <div className="auth-input">
+                      <Key size={18} weight="bold" />
+                      <input
+                        id="auth-confirmation"
+                        name="confirmation"
+                        type={showConfirmation ? 'text' : 'password'}
+                        placeholder="Repite la contraseña"
+                        autoComplete="new-password"
+                        required
+                      />
+                      <button
+                        type="button"
+                        className="auth-password-toggle"
+                        onClick={() => setShowConfirmation(!showConfirmation)}
+                        aria-label={showConfirmation ? 'Ocultar contraseña' : 'Ver contraseña'}
+                        title={showConfirmation ? 'Ocultar contraseña' : 'Ver contraseña'}
+                      >
+                        {showConfirmation ? <EyeSlash size={18} weight="bold" /> : <Eye size={18} weight="bold" />}
+                      </button>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="field-group">
+                    <label className="eyebrow" htmlFor="auth-email">
+                      Correo electrónico
+                    </label>
+                    <div className="auth-input">
+                      <EnvelopeSimple size={18} weight="bold" />
+                      <input
+                        id="auth-email"
+                        name="email"
+                        type="email"
+                        placeholder="tu@correo.com"
+                        autoComplete="email"
+                        value={inputEmail || registeredEmail || recoveryEmail}
+                        onChange={(e) => {
+                          setInputEmail(e.target.value);
+                          setRegisteredEmail('');
+                          setRecoveryEmail('');
+                          setError('');
+                        }}
+                        required
+                      />
+                      {mode === 'sign-up' && (
+                        <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0, paddingLeft: '4px' }}>
+                          {emailCheckStatus === 'checking' && (
+                            <span title="Comprobando disponibilidad..." style={{ display: 'inline-flex' }}>
+                              <SpinnerGap size={20} weight="bold" className="animate-spin" style={{ color: 'var(--muted)' }} />
+                            </span>
+                          )}
+                          {emailCheckStatus === 'available' && (
+                            <span title="Correo disponible" style={{ display: 'inline-flex' }}>
+                              <CheckCircle size={20} weight="fill" style={{ color: '#10b981' }} />
+                            </span>
+                          )}
+                          {emailCheckStatus === 'registered' && (
+                            <span title="Correo ya registrado" style={{ display: 'inline-flex' }}>
+                              <WarningCircle size={20} weight="fill" style={{ color: 'var(--accent-bright)' }} />
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {mode === 'sign-up' && emailCheckStatus === 'registered' && (
+                      <div className="email-status-feedback is-registered" role="alert">
+                        <span>⚠️ Este correo ya está registrado</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setRegisteredEmail(inputEmail);
+                            changeMode('sign-in');
+                          }}
+                        >
+                          Iniciar sesión →
+                        </button>
+                      </div>
+                    )}
+
+                    {mode === 'sign-up' && emailCheckStatus === 'available' && (
+                      <div className="email-status-feedback is-available">
+                        <span>✓ Correo disponible para registrar</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {mode !== 'reset' ? (
+                    <div className="field-group">
+                      <label className="eyebrow" htmlFor="auth-password">
+                        Contraseña
+                      </label>
+                      <div className="auth-input">
+                        <LockKey size={18} weight="bold" />
+                        <input
+                          id="auth-password"
+                          name="password"
+                          type={showPassword ? 'text' : 'password'}
+                          placeholder="Tu contraseña secreta"
+                          autoComplete={mode === 'sign-in' ? 'current-password' : 'new-password'}
+                          required
+                        />
+                        <button
+                          type="button"
+                          className="auth-password-toggle"
+                          onClick={() => setShowPassword(!showPassword)}
+                          aria-label={showPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
+                          title={showPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
+                        >
+                          {showPassword ? <EyeSlash size={18} weight="bold" /> : <Eye size={18} weight="bold" />}
+                        </button>
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {mode === 'sign-up' ? (
+                    <div className="field-group">
+                      <label className="eyebrow" htmlFor="auth-confirmation">
+                        Confirmar contraseña
+                      </label>
+                      <div className="auth-input">
+                        <LockKey size={18} weight="bold" />
+                        <input
+                          id="auth-confirmation"
+                          name="confirmation"
+                          type={showConfirmation ? 'text' : 'password'}
+                          placeholder="Repite la contraseña"
+                          autoComplete="new-password"
+                          required
+                        />
+                        <button
+                          type="button"
+                          className="auth-password-toggle"
+                          onClick={() => setShowConfirmation(!showConfirmation)}
+                          aria-label={showConfirmation ? 'Ocultar contraseña' : 'Ver contraseña'}
+                          title={showConfirmation ? 'Ocultar contraseña' : 'Ver contraseña'}
+                        >
+                          {showConfirmation ? <EyeSlash size={18} weight="bold" /> : <Eye size={18} weight="bold" />}
+                        </button>
+                      </div>
+                    </div>
+                  ) : null}
+                </>
+              )}
+
+              <button className="auth-submit" type="submit" disabled={submitting}>
+                <span>
+                  {submitting
+                    ? 'Procesando...'
+                    : mode === 'reset' && resetStep === 'otp'
+                      ? 'Continuar'
+                      : mode === 'reset' && resetStep === 'password'
+                        ? 'Guardar contraseña'
+                        : mode === 'reset'
+                          ? 'Enviar código'
+                          : mode === 'sign-up'
+                            ? 'Crear cuenta'
+                            : 'Iniciar sesión'}
+                </span>
+                {mode === 'reset' && resetStep === 'password' ? (
+                  <Check size={18} weight="bold" />
+                ) : mode === 'sign-up' ? (
+                  <UserPlus size={18} weight="bold" />
+                ) : (
+                  <ArrowRight size={18} weight="bold" />
+                )}
+              </button>
+            </form>
+          )}
         </div>
 
         <div className="auth-actions">
