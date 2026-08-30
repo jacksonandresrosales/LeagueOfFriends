@@ -13,7 +13,8 @@
     "supabase:start": "supabase start",
     "supabase:stop": "supabase stop",
     "supabase:reset": "supabase db reset --local",
-    "supabase:types": "supabase gen types typescript --local > src/types/database.ts"
+    "supabase:test": "supabase test db --local supabase/tests/database",
+    "supabase:types": "supabase gen types --local --lang typescript --schema public > src/types/database.ts"
   },
   "dependencies": {
     "@phosphor-icons/react": "^2.1.10",
