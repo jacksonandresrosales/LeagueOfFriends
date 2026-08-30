@@ -76,16 +76,16 @@ export function CreateChallenge() {
                 <small>Máximo 48 caracteres</small>
               </label>
 
-              <fieldset className="field-group">
-                <legend className="field-label">Tipo de objetivo</legend>
-                <div className="challenge-type-grid">
+              <div className="field-group">
+                <span className="field-label">Tipo de objetivo</span>
+                <div className="challenge-type-grid" role="group" aria-label="Tipo de objetivo">
                   {challengeTypes.map(({ id, title, description, icon: Icon }) => (
                     <button key={id} type="button" className={type === id ? 'challenge-type is-selected' : 'challenge-type'} onClick={() => { setType(id); setCreated(false); }} aria-pressed={type === id}>
                       <Icon size={25} weight={type === id ? 'fill' : 'bold'} /><strong>{title}</strong><small>{description}</small>
                     </button>
                   ))}
                 </div>
-              </fieldset>
+              </div>
 
               <div className="field-row">
                 <label className="field-group"><span className="field-label">Meta</span><div className="input-with-suffix"><input name="goal" type="number" min="1" defaultValue="240" required /><span>LP</span></div></label>
