@@ -5,10 +5,12 @@ import {
   CaretDown,
   Flame,
   ShieldChevron,
+  Sword,
   Trophy,
+  User,
   UsersThree,
 } from '@phosphor-icons/react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { AppSidebar } from '@/components/shared/app-sidebar';
 import { ThemeToggle } from '@/components/shared/theme-toggle';
@@ -41,6 +43,7 @@ interface PlayerStats {
   winRate: number;
   topChampionName?: string;
   topChampionPoints?: number;
+  hasRiotAccount: boolean;
 }
 
 const mockDemoRival: PlayerStats = {
@@ -55,6 +58,7 @@ const mockDemoRival: PlayerStats = {
   winRate: 63,
   topChampionName: 'Yasuo',
   topChampionPoints: 642000,
+  hasRiotAccount: true,
 };
 
 const periodChartData: Record<Period, { playerPath: string; rivalPath: string; playerPoints: number; rivalPoints: number; dates: string[] }> = {
@@ -89,11 +93,13 @@ export function CompareView() {
   const [currentUserStats, setCurrentUserStats] = useState<PlayerStats | null>(null);
   const [friendsList, setFriendsList] = useState<FriendOption[]>([]);
   const [selectedFriendId, setSelectedFriendId] = useState<string>(urlFriendId || 'demo');
+  const [rivalStats, setRivalStats] = useState<PlayerStats>(mockDemoRival);
 
+  // Cargar datos del usuario logueado y lista de amigos
   useEffect(() => {
     let isMounted = true;
 
-    async function fetchCompareData() {
+    async function fetchUserData() {
       const supabase = getSupabaseClient();
       const { data: userData } = await supabase.auth.getUser();
 
@@ -123,27 +129,51 @@ export function CompareView() {
         snap = snapData;
       }
 
+      // 2. Cargar resumen real de Riot si tiene cuenta vinculada
+      let topChampName: string | undefined;
+      let topChampPoints: number | undefined;
+
+      if (riotAccount) {
+        try {
+          const { data: sessionData } = await supabase.auth.getSession();
+          const token = sessionData.session?.access_token;
+          if (token) {
+            const summaryRes = await fetch('/api/riot/summary', {
+              headers: { Authorization: `Bearer ${token}` },
+            });
+            if (summaryRes.ok) {
+              const summary = await summaryRes.json();
+              topChampName = summary.topChampion?.name;
+              topChampPoints = summary.topChampion?.points;
+            }
+          }
+        } catch {
+          // Fallback silencioso
+        }
+      }
+
       const wins = snap?.wins ?? 0;
       const losses = snap?.losses ?? 0;
       const total = wins + losses;
 
       if (isMounted) {
         setCurrentUserStats({
-          displayName: riotAccount?.game_name || profile?.display_name || 'Tú',
+          displayName: riotAccount?.game_name || profile?.display_name || 'Invocador',
           tagLine: riotAccount ? `#${riotAccount.tag_line}` : '#LAN',
-          tier: snap?.tier || 'BRONZE',
-          division: snap?.division || 'I',
-          lp: snap?.league_points ?? 5,
+          tier: snap?.tier || 'UNRANKED',
+          division: snap?.division || '',
+          lp: snap?.league_points ?? 0,
           wins,
           losses,
           totalGames: total,
           winRate: total > 0 ? Math.round((wins / total) * 100) : 0,
-          topChampionName: 'Vayne',
-          topChampionPoints: 1011719,
+          topChampionName: topChampName,
+          topChampionPoints: topChampPoints,
+          hasRiotAccount: !!riotAccount,
         });
       }
 
-      // 2. Cargar amigos aceptados
+      // 3. Cargar amigos aceptados
       const { data: friendships } = await supabase
         .from('friendships')
         .select(`
@@ -179,39 +209,102 @@ export function CompareView() {
       }
     }
 
-    void fetchCompareData();
+    void fetchUserData();
 
     return () => {
       isMounted = false;
     };
   }, [urlFriendId]);
 
-  // Determinar rival actual (amigo seleccionado o demo)
-  const rivalStats: PlayerStats = useMemo(() => {
-    if (selectedFriendId === 'demo') {
-      return mockDemoRival;
-    }
-    const found = friendsList.find((f) => f.id === selectedFriendId);
-    if (!found) return mockDemoRival;
+  // Cargar datos dinámicos del rival cuando cambia selectedFriendId
+  useEffect(() => {
+    let isMounted = true;
 
-    return {
-      displayName: found.displayName,
-      tagLine: '#LAN',
-      tier: 'SILVER',
-      division: 'II',
-      lp: 45,
-      wins: 14,
-      losses: 12,
-      totalGames: 26,
-      winRate: 54,
-      topChampionName: 'Aatrox',
-      topChampionPoints: 310000,
+    async function loadRivalData() {
+      if (selectedFriendId === 'demo') {
+        if (isMounted) setRivalStats(mockDemoRival);
+        return;
+      }
+
+      const supabase = getSupabaseClient();
+
+      // Cargar perfil del amigo
+      const { data: friendProfile } = await supabase
+        .from('profiles')
+        .select('id, display_name')
+        .eq('id', selectedFriendId)
+        .maybeSingle();
+
+      if (!friendProfile) {
+        if (isMounted) setRivalStats(mockDemoRival);
+        return;
+      }
+
+      // Cargar cuenta de Riot del amigo
+      const { data: riotAccount } = await supabase
+        .from('riot_accounts')
+        .select('*')
+        .eq('profile_id', selectedFriendId)
+        .eq('is_primary', true)
+        .maybeSingle();
+
+      if (!riotAccount) {
+        if (isMounted) {
+          setRivalStats({
+            displayName: friendProfile.display_name,
+            tagLine: '#LAN',
+            tier: 'UNRANKED',
+            division: '',
+            lp: 0,
+            wins: 0,
+            losses: 0,
+            totalGames: 0,
+            winRate: 0,
+            hasRiotAccount: false,
+          });
+        }
+        return;
+      }
+
+      // Cargar último snapshot competitivo del amigo
+      const { data: snap } = await supabase
+        .from('ranked_snapshots')
+        .select('*')
+        .eq('riot_account_id', riotAccount.id)
+        .order('captured_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const wins = snap?.wins ?? 0;
+      const losses = snap?.losses ?? 0;
+      const total = wins + losses;
+
+      if (isMounted) {
+        setRivalStats({
+          displayName: riotAccount.game_name,
+          tagLine: `#${riotAccount.tag_line}`,
+          tier: snap?.tier || 'UNRANKED',
+          division: snap?.division || '',
+          lp: snap?.league_points ?? 0,
+          wins,
+          losses,
+          totalGames: total,
+          winRate: total > 0 ? Math.round((wins / total) * 100) : 0,
+          hasRiotAccount: true,
+        });
+      }
+    }
+
+    void loadRivalData();
+
+    return () => {
+      isMounted = false;
     };
-  }, [selectedFriendId, friendsList]);
+  }, [selectedFriendId]);
 
   const p1 = currentUserStats || {
-    displayName: 'jacksONFIRE',
-    tagLine: '#ASM',
+    displayName: 'Invocador',
+    tagLine: '#LAN',
     tier: 'BRONZE',
     division: 'I',
     lp: 5,
@@ -219,6 +312,7 @@ export function CompareView() {
     losses: 6,
     totalGames: 12,
     winRate: 50,
+    hasRiotAccount: true,
   };
 
   const p2 = rivalStats;
@@ -262,7 +356,7 @@ export function CompareView() {
             </div>
           </div>
 
-          <div style={{ position: 'relative', minWidth: '240px' }}>
+          <div style={{ position: 'relative', minWidth: '260px' }}>
             <select
               value={selectedFriendId}
               onChange={(e) => setSelectedFriendId(e.target.value)}
@@ -272,17 +366,17 @@ export function CompareView() {
                 border: '2px solid var(--line)',
                 background: 'var(--surface-alt)',
                 color: 'var(--ink)',
-                font: '800 13px var(--font-mono)',
+                font: '800 12px var(--font-mono)',
                 textTransform: 'uppercase',
                 padding: '0 36px 0 14px',
                 appearance: 'none',
                 cursor: 'pointer',
               }}
             >
-              <option value="demo">⚔️ Kuro #EUW (Rival Demo)</option>
+              <option value="demo">Kuro #EUW (Rival Demo)</option>
               {friendsList.map((f) => (
                 <option key={f.id} value={f.id}>
-                  👤 {f.displayName}
+                  {f.displayName}
                 </option>
               ))}
             </select>
@@ -305,9 +399,12 @@ export function CompareView() {
                 justifyContent: 'space-between',
               }}
             >
-              <strong style={{ font: '900 13px/1 var(--font-mono)', textTransform: 'uppercase', letterSpacing: '.08em' }}>
-                👤 Tu Invocador
-              </strong>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <User size={18} weight="bold" />
+                <strong style={{ font: '900 12px/1 var(--font-mono)', textTransform: 'uppercase', letterSpacing: '.08em' }}>
+                  Tu Invocador
+                </strong>
+              </div>
               <span
                 style={{
                   font: '800 11px/1 var(--font-mono)',
@@ -316,7 +413,7 @@ export function CompareView() {
                   padding: '3px 8px',
                 }}
               >
-                LAN
+                {p1.tagLine.replace('#', '')}
               </span>
             </div>
 
@@ -362,9 +459,12 @@ export function CompareView() {
                 justifyContent: 'space-between',
               }}
             >
-              <strong style={{ font: '900 13px/1 var(--font-mono)', textTransform: 'uppercase', letterSpacing: '.08em' }}>
-                ⚔️ Rival / Oponente
-              </strong>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Sword size={18} weight="bold" />
+                <strong style={{ font: '900 12px/1 var(--font-mono)', textTransform: 'uppercase', letterSpacing: '.08em' }}>
+                  Rival / Oponente
+                </strong>
+              </div>
               <span
                 style={{
                   font: '800 11px/1 var(--font-mono)',
@@ -388,7 +488,7 @@ export function CompareView() {
                     {p2.displayName} <span style={{ color: 'var(--muted)', fontSize: '14px' }}>{p2.tagLine}</span>
                   </h3>
                   <p style={{ margin: '6px 0 0', font: '800 13px var(--font-mono)', textTransform: 'uppercase' }}>
-                    {formatTierName(p2.tier, p2.division)} · <strong>{p2.lp} LP</strong>
+                    {p2.hasRiotAccount ? `${formatTierName(p2.tier, p2.division)} · ${p2.lp} LP` : 'Sin cuenta de LoL vinculada'}
                   </p>
                 </div>
               </div>
@@ -478,9 +578,9 @@ export function CompareView() {
                 <tr style={{ borderBottom: '2px solid var(--line)' }}>
                   <td style={{ padding: '14px 16px', whiteSpace: 'nowrap' }}>RANGO Y DIVISIÓN</td>
                   <td style={{ padding: '14px 16px', textAlign: 'center', whiteSpace: 'nowrap' }}>{formatTierName(p1.tier, p1.division)}</td>
-                  <td style={{ padding: '14px 16px', textAlign: 'center', whiteSpace: 'nowrap' }}>{formatTierName(p2.tier, p2.division)}</td>
+                  <td style={{ padding: '14px 16px', textAlign: 'center', whiteSpace: 'nowrap' }}>{p2.hasRiotAccount ? formatTierName(p2.tier, p2.division) : 'Sin clasificar'}</td>
                   <td style={{ padding: '14px 16px', textAlign: 'right', whiteSpace: 'nowrap' }}>
-                    <span className="profile-badge">{p2.tier === 'PLATINUM' ? p2.displayName : p1.displayName}</span>
+                    <span className="profile-badge">{p1.lp >= p2.lp ? p1.displayName : p2.displayName}</span>
                   </td>
                 </tr>
                 <tr style={{ borderBottom: '2px solid var(--line)' }}>
@@ -515,13 +615,17 @@ export function CompareView() {
                 </tr>
                 <tr>
                   <td style={{ padding: '14px 16px', whiteSpace: 'nowrap' }}>CAMPEÓN MÁS JUGADO</td>
-                  <td style={{ padding: '14px 16px', textAlign: 'center', whiteSpace: 'nowrap' }}>{p1.topChampionName || 'Vayne'}</td>
-                  <td style={{ padding: '14px 16px', textAlign: 'center', whiteSpace: 'nowrap' }}>{p2.topChampionName || 'Yasuo'}</td>
+                  <td style={{ padding: '14px 16px', textAlign: 'center', whiteSpace: 'nowrap' }}>{p1.topChampionName || 'Sin datos'}</td>
+                  <td style={{ padding: '14px 16px', textAlign: 'center', whiteSpace: 'nowrap' }}>{p2.topChampionName || 'Sin datos'}</td>
                   <td style={{ padding: '14px 16px', textAlign: 'right', whiteSpace: 'nowrap' }}>
-                    <span className="profile-badge profile-badge-accent">
-                      <Flame size={14} weight="fill" />
-                      <span>{p1.displayName} (1M PTS)</span>
-                    </span>
+                    {p1.topChampionName ? (
+                      <span className="profile-badge profile-badge-accent">
+                        <Flame size={14} weight="fill" />
+                        <span>{p1.topChampionName} {p1.topChampionPoints ? `(${Math.round(p1.topChampionPoints / 1000)}k PTS)` : ''}</span>
+                      </span>
+                    ) : (
+                      <span className="profile-badge">-</span>
+                    )}
                   </td>
                 </tr>
               </tbody>
