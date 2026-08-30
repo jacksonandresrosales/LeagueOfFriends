@@ -4,10 +4,11 @@ import type { Database } from '@/types/database';
 let client: SupabaseClient<Database> | undefined;
 
 function getConfig() {
-  const env = typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env : process.env;
+  const metaEnv = typeof import.meta !== 'undefined' && (import.meta as unknown as { env?: Record<string, string> }).env;
+  const procEnv = typeof process !== 'undefined' ? process.env : {};
   return {
-    url: env.VITE_SUPABASE_URL,
-    key: env.VITE_SUPABASE_PUBLISHABLE_KEY,
+    url: metaEnv?.VITE_SUPABASE_URL || metaEnv?.NEXT_PUBLIC_SUPABASE_URL || procEnv.NEXT_PUBLIC_SUPABASE_URL || procEnv.VITE_SUPABASE_URL,
+    key: metaEnv?.VITE_SUPABASE_PUBLISHABLE_KEY || metaEnv?.NEXT_PUBLIC_SUPABASE_ANON_KEY || procEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY || procEnv.VITE_SUPABASE_PUBLISHABLE_KEY,
   };
 }
 

@@ -2,7 +2,11 @@ import { createClient } from '@supabase/supabase-js';
 import type { Database } from '@/types/database';
 
 export function getSupabaseAdminClient() {
-  const url = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || 'http://127.0.0.1:54321';
+  const url =
+    process.env.VITE_SUPABASE_URL ||
+    process.env.NEXT_PUBLIC_SUPABASE_URL ||
+    process.env.SUPABASE_URL ||
+    'https://grawalsnickugctjfynm.supabase.co';
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!serviceKey) {
