@@ -8,13 +8,10 @@ import {
   Crosshair,
   Flame,
   GameController,
-  Medal,
   ShieldChevron,
-  Sword,
   Trophy,
-  UsersThree,
 } from '@phosphor-icons/react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { AppSidebar } from '@/components/shared/app-sidebar';
 import { ThemeToggle } from '@/components/shared/theme-toggle';
@@ -25,124 +22,120 @@ import type { Database } from '@/types/database';
 type Period = 'Día' | 'Semana' | 'Mes';
 const periods: Period[] = ['Día', 'Semana', 'Mes'];
 
-type RankedSnapshotRow = Database['public']['Tables']['ranked_snapshots']['Row'];
 type RiotAccountRow = Database['public']['Tables']['riot_accounts']['Row'];
+type RankedSnapshotRow = Database['public']['Tables']['ranked_snapshots']['Row'];
+type ProfileRow = Database['public']['Tables']['profiles']['Row'];
 
 interface RiotSummary {
+  gameName: string;
+  tagLine: string;
+  platform: string;
   summonerLevel: number;
   profileIconUrl: string;
   splashArtUrl: string;
   topChampion: {
-    id: number;
     name: string;
     points: number;
     level: number;
   };
 }
 
-const defaultFriends = [
-  { name: 'Kuro', tag: '#EUW', lp: '78 LP', tone: 'blue' },
-  { name: 'Maya', tag: '#LAS', lp: '54 LP', tone: 'green' },
-  { name: 'Nox', tag: '#LAN', lp: '32 LP', tone: 'orange' },
-];
-
-const periodChartData: Record<Period, { points: number; path: string; dates: string[] }> = {
+const periodData: Record<Period, { lp: string; games: string; wins: string; rate: string; playerPath: string; rivalPath: string }> = {
   Día: {
-    points: 12,
-    path: 'M0 176 C54 158 74 174 126 137 S211 121 263 88 S358 101 420 46 S511 58 570 24',
-    dates: ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00', '23:59'],
+    lp: '+22', games: '4', wins: '3', rate: '75%',
+    playerPath: 'M0 176 C54 158 74 174 126 137 S211 121 263 88 S358 101 420 46 S511 58 570 24',
+    rivalPath: 'M0 185 C59 177 83 144 141 151 S230 115 287 124 S374 78 428 91 S516 64 570 73',
   },
   Semana: {
-    points: 78,
-    path: 'M0 181 C46 170 80 188 127 148 S210 126 264 93 S355 110 419 52 S510 63 570 25',
-    dates: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'],
+    lp: '+138', games: '27', wins: '17', rate: '63%',
+    playerPath: 'M0 181 C46 170 80 188 127 148 S210 126 264 93 S355 110 419 52 S510 63 570 25',
+    rivalPath: 'M0 190 C49 181 89 146 142 158 S229 118 286 130 S372 83 429 97 S515 70 570 78',
   },
   Mes: {
-    points: 140,
-    path: 'M0 190 C52 179 74 160 127 171 S215 118 267 126 S355 69 421 80 S511 39 570 20',
-    dates: ['Sem 1', 'Sem 2', 'Sem 3', 'Sem 4'],
+    lp: '+306', games: '82', wins: '49', rate: '60%',
+    playerPath: 'M0 190 C52 179 74 160 127 171 S215 118 267 126 S355 69 421 80 S511 39 570 20',
+    rivalPath: 'M0 183 C56 151 85 175 143 140 S233 150 289 104 S376 120 431 86 S516 101 570 65',
   },
 };
 
+const defaultFriends = [
+  { place: '01', name: 'Andre', tag: '#LAN', lp: '+138', tone: 'red' },
+  { place: '02', name: 'Kuro', tag: '#EUW', lp: '+112', tone: 'dark' },
+  { place: '03', name: 'Maya', tag: '#LAS', lp: '+84', tone: 'light' },
+  { place: '04', name: 'Nox', tag: '#LAN', lp: '+61', tone: 'muted' },
+];
+
+function PerformanceChart({ period }: { period: Period }) {
+  const data = periodData[period];
+  const pointY = period === 'Día' ? 24 : period === 'Semana' ? 25 : 20;
+  return (
+    <figure className="chart" aria-label={`Evolución de LP durante el periodo: ${period}`}>
+      <div className="chart-y-axis" aria-hidden="true"><span>+160</span><span>+120</span><span>+80</span><span>+40</span><span>0</span></div>
+      <svg viewBox="0 0 570 210" role="img" aria-labelledby="chart-title chart-description" preserveAspectRatio="none">
+        <title id="chart-title">Comparativa de puntos de liga</title>
+        <desc id="chart-description">Evolución de puntos de liga durante el periodo.</desc>
+        {[20, 62, 104, 146, 188].map((y) => <line key={y} x1="0" y1={y} x2="570" y2={y} className="grid-line" />)}
+        <path d={data.rivalPath} className="chart-line rival-line" />
+        <path d={data.playerPath} className="chart-line player-line" />
+        <circle cx="570" cy={pointY} r="6" className="chart-point" />
+      </svg>
+      <div className="chart-x-axis" aria-hidden="true"><span>Lun</span><span>Mar</span><span>Mié</span><span>Jue</span><span>Vie</span><span>Sáb</span><span>Dom</span></div>
+    </figure>
+  );
+}
+
 export function Dashboard() {
   const [period, setPeriod] = useState<Period>('Semana');
-  const [profileName, setProfileName] = useState('Invocador');
+  const [profile, setProfile] = useState<ProfileRow | null>(null);
   const [riotAccount, setRiotAccount] = useState<RiotAccountRow | null>(null);
   const [snapshot, setSnapshot] = useState<RankedSnapshotRow | null>(null);
   const [riotSummary, setRiotSummary] = useState<RiotSummary | null>(null);
-  const [pendingFriendRequests, setPendingFriendRequests] = useState(0);
-  const [showNotifications, setShowNotifications] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const notifDropdownRef = useRef<HTMLDivElement>(null);
-
-  // Cerrar notificaciones al hacer clic afuera
   useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (notifDropdownRef.current && !notifDropdownRef.current.contains(e.target as Node)) {
-        setShowNotifications(false);
-      }
-    }
-    if (showNotifications) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [showNotifications]);
-
-  useEffect(() => {
-    let isMounted = true;
-
     async function loadData() {
       const supabase = getSupabaseClient();
       const { data: userData } = await supabase.auth.getUser();
 
       if (!userData?.user) {
-        if (isMounted) setLoading(false);
+        setLoading(false);
         return;
       }
 
-      const userId = userData.user.id;
-
       // 1. Cargar perfil
-      const { data: profile } = await supabase
+      const { data: profileData } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', userId)
+        .eq('id', userData.user.id)
         .maybeSingle();
 
-      if (profile && isMounted) {
-        setProfileName(profile.display_name);
-      }
+      if (profileData) setProfile(profileData);
 
-      // 2. Cargar cuenta de Riot
-      const { data: account } = await supabase
+      // 2. Cargar cuenta principal de Riot
+      const { data: accountData } = await supabase
         .from('riot_accounts')
         .select('*')
-        .eq('profile_id', userId)
+        .eq('profile_id', userData.user.id)
         .eq('is_primary', true)
         .maybeSingle();
 
-      if (isMounted) {
-        setRiotAccount(account);
-      }
+      if (accountData) {
+        setRiotAccount(accountData);
 
-      // 3. Cargar snapshot ranked
-      if (account) {
-        const { data: snap } = await supabase
+        // 3. Cargar último snapshot competitivo
+        const { data: snapshotData } = await supabase
           .from('ranked_snapshots')
           .select('*')
-          .eq('riot_account_id', account.id)
+          .eq('riot_account_id', accountData.id)
           .order('captured_at', { ascending: false })
           .limit(1)
           .maybeSingle();
 
-        if (isMounted) {
-          setSnapshot(snap);
+        if (snapshotData) {
+          setSnapshot(snapshotData);
         }
 
-        // 4. Cargar resumen enriquecido (banner, top champ, icono)
+        // 4. Cargar resumen enriquecido de Riot Games (splash art, profile icon, top champion)
         try {
           const { data: sessionData } = await supabase.auth.getSession();
           const token = sessionData.session?.access_token;
@@ -150,42 +143,30 @@ export function Dashboard() {
             const summaryRes = await fetch('/api/riot/summary', {
               headers: { Authorization: `Bearer ${token}` },
             });
-            if (summaryRes.ok && isMounted) {
-              const summaryData = (await summaryRes.json()) as RiotSummary;
-              setRiotSummary(summaryData);
+            if (summaryRes.ok) {
+              const summaryJson = await summaryRes.json();
+              setRiotSummary(summaryJson);
             }
           }
         } catch {
-          // Ignorar fallo de summary para no bloquear dashboard
+          // Si falla, se muestra la vista estándar
         }
       }
 
-      // 5. Cargar solicitudes de amistad pendientes
-      const { count } = await supabase
-        .from('friendships')
-        .select('*', { count: 'exact', head: true })
-        .eq('addressee_id', userId)
-        .eq('status', 'pending');
-
-      if (isMounted) {
-        setPendingFriendRequests(count || 0);
-        setLoading(false);
-      }
+      setLoading(false);
     }
 
     void loadData();
-
-    return () => {
-      isMounted = false;
-    };
   }, []);
 
-  const displayName = riotAccount?.game_name || profileName;
+  const displayName = riotAccount ? riotAccount.game_name : profile?.display_name || 'Invocador';
   const tagLine = riotAccount ? `#${riotAccount.tag_line}` : '#LAN';
   const initials = displayName.slice(0, 2).toUpperCase();
 
-  const tier = snapshot?.tier || 'BRONZE';
-  const division = snapshot?.division || 'I';
+  const rankTier = snapshot?.tier || 'UNRANKED';
+  const rankDivision = snapshot?.division || '';
+  const rankName = formatTierName(rankTier, rankDivision);
+  const rankInitials = getRankInitials(rankDivision);
   const lp = snapshot?.league_points ?? 0;
   const wins = snapshot?.wins ?? 0;
   const losses = snapshot?.losses ?? 0;
@@ -199,107 +180,9 @@ export function Dashboard() {
         <header className="topbar">
           <div><p className="eyebrow">Panel personal / Temporada 2026</p><h1>Tu rendimiento</h1></div>
           <div className="topbar-actions">
-            {/* Popover de Notificaciones */}
-            <div style={{ position: 'relative' }} ref={notifDropdownRef}>
-              <button
-                className="icon-button notification-button"
-                type="button"
-                onClick={() => setShowNotifications(!showNotifications)}
-                aria-label="Ver notificaciones"
-                aria-expanded={showNotifications}
-              >
-                <Bell size={20} weight="bold" />
-                {pendingFriendRequests > 0 ? <span className="notification-dot" /> : null}
-              </button>
-
-              {showNotifications ? (
-                <div
-                  className="panel"
-                  style={{
-                    position: 'absolute',
-                    top: 'calc(100% + 10px)',
-                    right: 0,
-                    width: '320px',
-                    padding: '16px',
-                    zIndex: 100,
-                    boxShadow: '6px 6px 0 var(--line)',
-                  }}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid var(--line)', paddingBottom: '10px', marginBottom: '12px' }}>
-                    <strong style={{ font: '900 13px/1 var(--font-display)', textTransform: 'uppercase' }}>
-                      Notificaciones
-                    </strong>
-                    <span className="profile-badge" style={{ fontSize: '9px', padding: '2px 6px' }}>
-                      {pendingFriendRequests > 0 ? `${pendingFriendRequests} Nuevas` : 'Al día'}
-                    </span>
-                  </div>
-
-                  <div style={{ display: 'grid', gap: '10px' }}>
-                    {pendingFriendRequests > 0 ? (
-                      <Link
-                        href="/amigos"
-                        onClick={() => setShowNotifications(false)}
-                        style={{
-                          padding: '10px 12px',
-                          background: 'color-mix(in oklch, var(--accent) 12%, var(--surface))',
-                          border: '2px solid var(--line)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '10px',
-                          textDecoration: 'none',
-                          color: 'var(--ink)',
-                        }}
-                      >
-                        <UsersThree size={20} weight="bold" color="var(--accent-bright)" />
-                        <div>
-                          <strong style={{ font: '800 12px/1.2 var(--font-sans)', display: 'block' }}>
-                            {pendingFriendRequests} {pendingFriendRequests === 1 ? 'Solicitud de amistad' : 'Solicitudes de amistad'}
-                          </strong>
-                          <small style={{ font: '700 9px var(--font-mono)', color: 'var(--muted)', textTransform: 'uppercase' }}>
-                            Haz clic para revisar
-                          </small>
-                        </div>
-                      </Link>
-                    ) : null}
-
-                    <Link
-                      href="/retos"
-                      onClick={() => setShowNotifications(false)}
-                      style={{
-                        padding: '10px 12px',
-                        background: 'var(--surface-alt)',
-                        border: '2px solid var(--line)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '10px',
-                        textDecoration: 'none',
-                        color: 'var(--ink)',
-                      }}
-                    >
-                      <Sword size={20} weight="bold" color="var(--accent-bright)" />
-                      <div>
-                        <strong style={{ font: '800 12px/1.2 var(--font-sans)', display: 'block' }}>
-                          Retos de Temporada
-                        </strong>
-                        <small style={{ font: '700 9px var(--font-mono)', color: 'var(--muted)', textTransform: 'uppercase' }}>
-                          Revisa tus duelos activos
-                        </small>
-                      </div>
-                    </Link>
-                  </div>
-                </div>
-              ) : null}
-            </div>
-
+            <button className="icon-button notification-button" type="button" aria-label="Ver notificaciones"><Bell size={20} weight="bold" /><span className="notification-dot" /></button>
             <ThemeToggle />
-
-            {/* Mini Perfil Clickable hacia Ajustes / Vincular Riot */}
-            <Link
-              href="/vincular-riot"
-              className="mini-profile"
-              aria-label={`Perfil de ${displayName} - Configurar cuenta`}
-              style={{ textDecoration: 'none', cursor: 'pointer' }}
-            >
+            <div className="mini-profile" aria-label={`Perfil de ${displayName}`}>
               {riotSummary?.profileIconUrl ? (
                 <img
                   src={riotSummary.profileIconUrl}
@@ -312,7 +195,7 @@ export function Dashboard() {
                 <span className="avatar avatar-small">{initials}</span>
               )}
               <span><strong>{displayName}</strong><small>{tagLine}</small></span>
-            </Link>
+            </div>
           </div>
         </header>
 
@@ -346,108 +229,103 @@ export function Dashboard() {
                 <div className="profile-banner-avatar">
                   <img
                     src={riotSummary.profileIconUrl}
-                    alt={`Ícono de ${displayName}`}
-                    width={96}
-                    height={96}
+                    alt={`Ícono de invocador de ${displayName}`}
+                    width={82}
+                    height={82}
                   />
-                  <span className="profile-banner-level">
-                    NVL {riotSummary.summonerLevel}
-                  </span>
+                  <span className="profile-banner-level">NVL {riotSummary.summonerLevel}</span>
                 </div>
-
                 <div className="profile-banner-info">
                   <h2 className="profile-banner-name">
-                    {displayName} <span className="profile-banner-tag">{tagLine}</span>
+                    {displayName}
+                    <span className="profile-banner-tag">{tagLine} ({riotSummary.platform})</span>
                   </h2>
                   <div className="profile-banner-meta">
-                    <span className="profile-badge profile-badge-accent">
-                      {formatTierName(tier, division)}
-                    </span>
+                    <span className="profile-badge profile-badge-accent">{rankName}</span>
+                    <span className="profile-badge">{lp} LP</span>
                     <span className="profile-badge">
-                      {lp} LP
-                    </span>
-                    <span className="profile-badge">
-                      {winRate}% WR ({wins}V - {losses}D)
+                      {totalGames > 0 ? `${wins}V - ${losses}D (${winRate}%)` : 'Solo/Duo'}
                     </span>
                   </div>
                 </div>
               </div>
 
-              {riotSummary.topChampion ? (
-                <div className="mastery-card" aria-label="Campeón principal">
-                  <div className="mastery-card-header">
-                    <Flame size={14} weight="fill" />
-                    <span>Campeón Principal</span>
-                  </div>
-                  <strong className="mastery-card-name">
-                    {riotSummary.topChampion.name}
-                  </strong>
-                  <div className="mastery-card-points">
-                    <span>Maestría {riotSummary.topChampion.level}</span>
-                    <span>{riotSummary.topChampion.points.toLocaleString()} PTS</span>
+              <div className="profile-banner-right">
+                <div className="mastery-card">
+                  <Flame size={28} weight="fill" style={{ color: 'var(--accent-bright)' }} />
+                  <div>
+                    <small>Campeón Principal</small>
+                    <strong>{riotSummary.topChampion.name} · {riotSummary.topChampion.points.toLocaleString()} PTS</strong>
                   </div>
                 </div>
-              ) : null}
+              </div>
             </div>
           </section>
         ) : (
-          <section className="profile-hero">
-            <div className="rank-emblem" aria-label={`Rango: ${tier} ${division}`}>
-              <ShieldChevron size={58} weight="fill" />
-              <span>{getRankInitials(division)}</span>
+          <section className="profile-hero" aria-labelledby="profile-name">
+            <div className="rank-emblem" aria-hidden="true">
+              <ShieldChevron size={66} weight="fill" />
+              <span>{rankInitials}</span>
             </div>
             <div className="profile-copy">
               <p className="eyebrow">Invocador principal</p>
-              <h2>{displayName}</h2>
+              <h2 id="profile-name">{displayName}<span>{tagLine}</span></h2>
               <div className="rank-line">
-                <span>{tagLine}</span>
-                <span>{formatTierName(tier, division)}</span>
-                <span><strong>{lp} LP</strong></span>
+                <strong>{rankName}</strong>
+                <span>{lp} LP</span>
+                <span className="positive">{totalGames > 0 ? `${wins}V - ${losses}D (${winRate}%)` : 'Sin partidas registradas'}</span>
               </div>
             </div>
             <div className="season-goal">
-              <span className="eyebrow">Meta de la temporada</span>
-              <strong>Esmeralda IV</strong>
-              <div className="progress-track"><span style={{ width: `${Math.min(100, Math.max(5, lp))}%` }} /></div>
-              <small><Medal size={14} weight="bold" /> {lp > 0 ? `${lp} LP acumulados` : '0 LP'}</small>
+              <span className="eyebrow">Objetivo de temporada</span><strong>Esmeralda IV</strong>
+              <div className="progress-track"><span style={{ width: `${Math.min(100, Math.max(10, winRate))}%` }} /></div>
+              <small>{winRate}% win rate en clasificatorias</small>
             </div>
           </section>
         )}
 
-        <section className="metrics" aria-label="Métricas principales de la temporada">
-          <article className="metric"><span className="eyebrow">Puntos de liga</span><strong>{lp}</strong><small>{tier} {division}</small></article>
-          <article className="metric"><span className="eyebrow">Win rate</span><strong>{winRate}%</strong><small>{totalGames} partidas</small></article>
-          <article className="metric"><span className="eyebrow">Victorias</span><strong>{wins}</strong><small>Partidas ganadas</small></article>
-          <article className="metric"><span className="eyebrow">Derrotas</span><strong>{losses}</strong><small>Partidas perdidas</small></article>
-        </section>
-
-        <section className="panel performance-panel">
-          <div className="panel-heading">
-            <div><p className="eyebrow">Evolución</p><h2>Rendimiento</h2></div>
-            <div className="neo-tabs">
-              {periods.map((item) => <button key={item} type="button" className={period === item ? 'is-active' : ''} onClick={() => setPeriod(item)} aria-pressed={period === item}>{item}</button>)}
-            </div>
-          </div>
-          <div className="chart-legend"><span><i className="legend-player" /> {displayName} <strong>{lp} LP</strong></span><span><i className="legend-rival" /> Kuro <strong>{periodChartData[period].points} LP</strong></span></div>
-          <figure className="chart" aria-label={`Evolución de LP durante el periodo: ${period}`}>
-            <div className="chart-y-axis" aria-hidden="true"><span>+160</span><span>+120</span><span>+80</span><span>+40</span><span>0</span></div>
-            <svg viewBox="0 0 570 210" role="img" aria-labelledby="chart-title chart-description" preserveAspectRatio="none">
-              <title id="chart-title">Evolución de puntos de liga</title>
-              <desc id="chart-description">Gráfico de líneas que muestra la ganancia de LP para {displayName} y su rival.</desc>
-              {[20, 62, 104, 146, 188].map((y) => <line key={y} x1="0" y1={y} x2="570" y2={y} className="grid-line" />)}
-              <path d="M0 188 C50 178 78 152 130 162 S220 120 274 132 S360 84 418 98 S504 74 570 82" className="chart-line rival-line" />
-              <path d={periodChartData[period].path} className="chart-line player-line" />
-              <circle cx="570" cy={period === 'Día' ? 24 : 25} r="6" className="chart-point" />
-            </svg>
-            <div className="chart-x-axis" aria-hidden="true">{periodChartData[period].dates.map((d) => <span key={d}>{d}</span>)}</div>
-          </figure>
+        <section className="metrics" aria-label="Métricas principales">
+          <article className="metric metric-featured">
+            <span className="metric-label">LP actuales</span>
+            <strong>{lp} LP</strong>
+            <small>{rankTier !== 'UNRANKED' ? rankName : 'Solo/Duo'}</small>
+          </article>
+          <article className="metric">
+            <span className="metric-label">Partidas</span>
+            <strong>{totalGames}</strong>
+            <small>Solo/Duo 2026</small>
+          </article>
+          <article className="metric">
+            <span className="metric-label">Victorias</span>
+            <strong>{wins}</strong>
+            <small>{losses} derrotas</small>
+          </article>
+          <article className="metric">
+            <span className="metric-label">Win rate</span>
+            <strong>{winRate}%</strong>
+            <small className={winRate >= 50 ? 'positive' : ''}>{wins} de {totalGames} ganadas</small>
+          </article>
         </section>
 
         <div className="dashboard-grid">
-          <section className="panel" aria-labelledby="circle-title">
-            <div className="panel-heading compact"><div><p className="eyebrow">Clasificación</p><h2 id="circle-title">Tu Círculo</h2></div><Trophy size={32} weight="fill" /></div>
-            <ol className="friends-rank">
-              <li className="is-player">
+          <section className="panel performance-panel" aria-labelledby="performance-title">
+            <div className="panel-heading">
+              <div><p className="eyebrow">Cara a cara</p><h2 id="performance-title">Progreso de LP</h2></div>
+              <div className="period-tabs" role="group" aria-label="Seleccionar periodo">
+                {periods.map((item) => <button key={item} type="button" className={period === item ? 'is-active' : ''} onClick={() => setPeriod(item)} aria-pressed={period === item}>{item}</button>)}
+              </div>
+            </div>
+            <div className="chart-legend">
+              <span><i className="legend-player" /> Tú <strong>{lp} LP</strong></span>
+              <span><i className="legend-rival" /> Kuro <strong>+112 LP</strong></span>
+            </div>
+            <PerformanceChart period={period} />
+          </section>
+
+          <section className="panel leaderboard-panel" aria-labelledby="leaderboard-title">
+            <div className="panel-heading compact"><div><p className="eyebrow">Tu círculo</p><h2 id="leaderboard-title">Clasificación</h2></div><Trophy size={27} weight="fill" /></div>
+            <ol className="friends-list">
+              <li className="current-user">
                 <span className="place">01</span>
                 {riotSummary?.profileIconUrl ? (
                   <img
@@ -472,18 +350,14 @@ export function Dashboard() {
                 </li>
               ))}
             </ol>
-            <Link href="/clasificacion" className="text-button" style={{ display: 'inline-block', textDecoration: 'none' }}>
-              Ver clasificación completa →
-            </Link>
+            <Link href="/clasificacion" className="text-button">Ver clasificación completa →</Link>
           </section>
 
           <section className="panel challenge-panel" aria-labelledby="challenge-title">
             <div className="challenge-symbol"><Crosshair size={42} weight="bold" /></div>
             <div className="challenge-info"><p className="eyebrow">Reto activo / 12 días restantes</p><h2 id="challenge-title">Road to Emerald</h2><p>El primero en alcanzar Esmeralda IV gana. Cuatro amigos, una sola meta.</p></div>
             <div className="challenge-progress"><div><span>Tu progreso</span><strong>{lp > 0 ? `${lp} LP` : '0%'}</strong></div><div className="progress-track large"><span style={{ width: `${Math.min(100, Math.max(5, lp))}%` }} /></div><small><Check size={15} weight="bold" /> {lp} LP acumulados</small></div>
-            <Link href="/retos" className="secondary-button" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}>
-              Ver reto
-            </Link>
+            <Link href="/retos" className="secondary-button">Ver reto</Link>
           </section>
         </div>
       </main>
