@@ -520,17 +520,19 @@ export function CreateChallenge() {
                   return (
                     <label key={friend.id} className={selected ? 'friend-option is-selected' : 'friend-option'}>
                       <input type="checkbox" checked={selected} onChange={() => toggleFriend(friend.id)} />
-                      {friend.profileIconUrl ? (
-                        <div style={{ width: '40px', height: '40px', border: '2px solid var(--line)', overflow: 'hidden' }}>
-                          <img src={friend.profileIconUrl} alt="" width={40} height={40} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <div className="friend-option-info">
+                        {friend.profileIconUrl ? (
+                          <div className="friend-option-avatar">
+                            <img src={friend.profileIconUrl} alt="" width={40} height={40} />
+                          </div>
+                        ) : (
+                          <span className="avatar avatar-small">{friend.initials}</span>
+                        )}
+                        <div className="friend-option-names">
+                          <strong>{friend.name}</strong>
+                          <small>{friend.tag}</small>
                         </div>
-                      ) : (
-                        <span className="avatar">{friend.initials}</span>
-                      )}
-                      <span>
-                        <strong>{friend.name}</strong>
-                        <small>{friend.tag}</small>
-                      </span>
+                      </div>
                       <span className="selection-box">{selected ? <Check size={16} weight="bold" /> : null}</span>
                     </label>
                   );

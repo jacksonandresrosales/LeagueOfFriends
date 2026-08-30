@@ -429,15 +429,17 @@ button:focus-visible, a:focus-visible { outline: 3px solid var(--accent-bright);
 .date-note strong { font: 750 11px/1 var(--font-mono), monospace; }
 .date-note small { color: var(--muted); font-size: 10px; }
 .friend-picker { display: grid; gap: 9px; }
-.friend-option { min-height: 62px; padding: 9px 12px; display: grid; grid-template-columns: auto 42px 1fr auto; align-items: center; gap: 11px; border: 2px solid var(--line); background: var(--bg); cursor: pointer; }
+.friend-option { min-height: 62px; padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; gap: 14px; border: 2px solid var(--line); background: var(--bg); cursor: pointer; transition: background-color 140ms ease; }
 .friend-option:hover { background: var(--surface-alt); }
 .friend-option.is-selected { background: color-mix(in oklch, var(--accent) 12%, var(--surface)); }
-.friend-option > input { position: absolute; width: 1px; height: 1px; opacity: 0; }
-.friend-option .avatar { width: 40px; height: 40px; }
-.friend-option > span:nth-of-type(2) { display: grid; }
-.friend-option strong { font: 800 17px/1 var(--font-display), sans-serif; text-transform: uppercase; }
-.friend-option small { margin-top: 4px; color: var(--muted); font: 650 9px/1 var(--font-mono), monospace; }
-.selection-box { width: 26px; height: 26px; display: grid; place-items: center; border: 2px solid var(--line); background: var(--surface); }
+.friend-option > input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.friend-option-info { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.friend-option-avatar { width: 40px; height: 40px; border: 2px solid var(--line); overflow: hidden; flex-shrink: 0; background: var(--surface); }
+.friend-option-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.friend-option-names { display: flex; flex-direction: column; min-width: 0; }
+.friend-option-names strong { font: 800 16px/1.1 var(--font-display), sans-serif; text-transform: uppercase; }
+.friend-option-names small { margin-top: 3px; color: var(--muted); font: 700 10px/1 var(--font-mono), monospace; }
+.selection-box { width: 26px; height: 26px; flex-shrink: 0; display: grid; place-items: center; border: 2px solid var(--line); background: var(--surface); }
 .friend-option.is-selected .selection-box { background: var(--accent); color: var(--on-accent); }
 .invite-button { margin-top: 13px; min-height: 43px; padding: 0 14px; border: 2px solid var(--line); background: var(--surface); display: flex; align-items: center; gap: 8px; cursor: pointer; font: 750 10px/1 var(--font-mono), monospace; text-transform: uppercase; box-shadow: 3px 3px 0 var(--line); }
 .invite-button:hover { background: var(--surface-alt); }
