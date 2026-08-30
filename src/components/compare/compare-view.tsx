@@ -293,65 +293,115 @@ export function CompareView() {
         {/* Tarjetas Cara a Cara (Versus) */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', marginBottom: '32px' }}>
           {/* Jugador 1 (Tú) */}
-          <article className="panel" style={{ padding: '24px', borderTop: '6px solid var(--accent)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-              <span className="profile-badge profile-badge-accent">Tú</span>
-              <small style={{ font: '800 11px var(--font-mono)', color: 'var(--muted)' }}>LAN</small>
+          <article className="panel" style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            <div
+              style={{
+                padding: '12px 20px',
+                background: 'var(--accent)',
+                color: 'var(--on-accent)',
+                borderBottom: '3px solid var(--line)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <strong style={{ font: '900 13px/1 var(--font-mono)', textTransform: 'uppercase', letterSpacing: '.08em' }}>
+                👤 Tu Invocador
+              </strong>
+              <span
+                style={{
+                  font: '800 11px/1 var(--font-mono)',
+                  background: 'var(--line)',
+                  color: 'var(--on-accent)',
+                  padding: '3px 8px',
+                }}
+              >
+                LAN
+              </span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
-              <div className="rank-emblem" style={{ width: '64px', height: '64px', fontSize: '12px' }}>
-                <ShieldChevron size={48} weight="fill" />
-                <span style={{ fontSize: '14px' }}>{getRankInitials(p1.division)}</span>
+
+            <div style={{ padding: '24px', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <div className="rank-emblem" style={{ width: '68px', height: '68px', flexShrink: 0 }}>
+                  <ShieldChevron size={52} weight="fill" />
+                  <span style={{ fontSize: '15px' }}>{getRankInitials(p1.division)}</span>
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, font: '900 24px/1 var(--font-display)', textTransform: 'uppercase' }}>
+                    {p1.displayName} <span style={{ color: 'var(--muted)', fontSize: '14px' }}>{p1.tagLine}</span>
+                  </h3>
+                  <p style={{ margin: '6px 0 0', font: '800 13px var(--font-mono)', textTransform: 'uppercase' }}>
+                    {formatTierName(p1.tier, p1.division)} · <strong>{p1.lp} LP</strong>
+                  </p>
+                </div>
               </div>
-              <div>
-                <h3 style={{ margin: 0, font: '900 24px/1 var(--font-display)', textTransform: 'uppercase' }}>
-                  {p1.displayName} <span style={{ color: 'var(--muted)', fontSize: '14px' }}>{p1.tagLine}</span>
-                </h3>
-                <p style={{ margin: '4px 0 0', font: '800 13px var(--font-mono)', textTransform: 'uppercase' }}>
-                  {formatTierName(p1.tier, p1.division)} · <strong>{p1.lp} LP</strong>
-                </p>
-              </div>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-              <div style={{ padding: '10px', background: 'var(--surface-alt)', border: '2px solid var(--line)' }}>
-                <small style={{ display: 'block', font: '700 9px var(--font-mono)', color: 'var(--muted)', textTransform: 'uppercase' }}>Win Rate</small>
-                <strong style={{ font: '900 20px/1 var(--font-display)' }}>{p1.winRate}%</strong>
-              </div>
-              <div style={{ padding: '10px', background: 'var(--surface-alt)', border: '2px solid var(--line)' }}>
-                <small style={{ display: 'block', font: '700 9px var(--font-mono)', color: 'var(--muted)', textTransform: 'uppercase' }}>Partidas</small>
-                <strong style={{ font: '900 20px/1 var(--font-display)' }}>{p1.totalGames}</strong>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div style={{ padding: '12px 14px', background: 'var(--surface-alt)', border: '2px solid var(--line)', boxShadow: '2px 2px 0 var(--line)' }}>
+                  <small style={{ display: 'block', font: '700 9px var(--font-mono)', color: 'var(--muted)', textTransform: 'uppercase' }}>Win Rate</small>
+                  <strong style={{ font: '900 22px/1.2 var(--font-display)' }}>{p1.winRate}%</strong>
+                </div>
+                <div style={{ padding: '12px 14px', background: 'var(--surface-alt)', border: '2px solid var(--line)', boxShadow: '2px 2px 0 var(--line)' }}>
+                  <small style={{ display: 'block', font: '700 9px var(--font-mono)', color: 'var(--muted)', textTransform: 'uppercase' }}>Partidas</small>
+                  <strong style={{ font: '900 22px/1.2 var(--font-display)' }}>{p1.totalGames}</strong>
+                </div>
               </div>
             </div>
           </article>
 
           {/* Jugador 2 (Rival) */}
-          <article className="panel" style={{ padding: '24px', borderTop: '6px solid var(--ink)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-              <span className="profile-badge">Rival</span>
-              <small style={{ font: '800 11px var(--font-mono)', color: 'var(--muted)' }}>{p2.tagLine.replace('#', '')}</small>
+          <article className="panel" style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            <div
+              style={{
+                padding: '12px 20px',
+                background: 'var(--surface-alt)',
+                color: 'var(--ink)',
+                borderBottom: '3px solid var(--line)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <strong style={{ font: '900 13px/1 var(--font-mono)', textTransform: 'uppercase', letterSpacing: '.08em' }}>
+                ⚔️ Rival / Oponente
+              </strong>
+              <span
+                style={{
+                  font: '800 11px/1 var(--font-mono)',
+                  background: 'var(--line)',
+                  color: 'var(--surface)',
+                  padding: '3px 8px',
+                }}
+              >
+                {p2.tagLine.replace('#', '')}
+              </span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
-              <div className="rank-emblem" style={{ width: '64px', height: '64px', background: 'var(--ink)', color: 'var(--surface)' }}>
-                <ShieldChevron size={48} weight="fill" />
-                <span style={{ fontSize: '14px', color: 'var(--surface)' }}>{getRankInitials(p2.division)}</span>
+
+            <div style={{ padding: '24px', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <div className="rank-emblem" style={{ width: '68px', height: '68px', background: 'var(--ink)', color: 'var(--surface)', flexShrink: 0 }}>
+                  <ShieldChevron size={52} weight="fill" />
+                  <span style={{ fontSize: '15px', color: 'var(--surface)' }}>{getRankInitials(p2.division)}</span>
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, font: '900 24px/1 var(--font-display)', textTransform: 'uppercase' }}>
+                    {p2.displayName} <span style={{ color: 'var(--muted)', fontSize: '14px' }}>{p2.tagLine}</span>
+                  </h3>
+                  <p style={{ margin: '6px 0 0', font: '800 13px var(--font-mono)', textTransform: 'uppercase' }}>
+                    {formatTierName(p2.tier, p2.division)} · <strong>{p2.lp} LP</strong>
+                  </p>
+                </div>
               </div>
-              <div>
-                <h3 style={{ margin: 0, font: '900 24px/1 var(--font-display)', textTransform: 'uppercase' }}>
-                  {p2.displayName} <span style={{ color: 'var(--muted)', fontSize: '14px' }}>{p2.tagLine}</span>
-                </h3>
-                <p style={{ margin: '4px 0 0', font: '800 13px var(--font-mono)', textTransform: 'uppercase' }}>
-                  {formatTierName(p2.tier, p2.division)} · <strong>{p2.lp} LP</strong>
-                </p>
-              </div>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-              <div style={{ padding: '10px', background: 'var(--surface-alt)', border: '2px solid var(--line)' }}>
-                <small style={{ display: 'block', font: '700 9px var(--font-mono)', color: 'var(--muted)', textTransform: 'uppercase' }}>Win Rate</small>
-                <strong style={{ font: '900 20px/1 var(--font-display)' }}>{p2.winRate}%</strong>
-              </div>
-              <div style={{ padding: '10px', background: 'var(--surface-alt)', border: '2px solid var(--line)' }}>
-                <small style={{ display: 'block', font: '700 9px var(--font-mono)', color: 'var(--muted)', textTransform: 'uppercase' }}>Partidas</small>
-                <strong style={{ font: '900 20px/1 var(--font-display)' }}>{p2.totalGames}</strong>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div style={{ padding: '12px 14px', background: 'var(--surface-alt)', border: '2px solid var(--line)', boxShadow: '2px 2px 0 var(--line)' }}>
+                  <small style={{ display: 'block', font: '700 9px var(--font-mono)', color: 'var(--muted)', textTransform: 'uppercase' }}>Win Rate</small>
+                  <strong style={{ font: '900 22px/1.2 var(--font-display)' }}>{p2.winRate}%</strong>
+                </div>
+                <div style={{ padding: '12px 14px', background: 'var(--surface-alt)', border: '2px solid var(--line)', boxShadow: '2px 2px 0 var(--line)' }}>
+                  <small style={{ display: 'block', font: '700 9px var(--font-mono)', color: 'var(--muted)', textTransform: 'uppercase' }}>Partidas</small>
+                  <strong style={{ font: '900 22px/1.2 var(--font-display)' }}>{p2.totalGames}</strong>
+                </div>
               </div>
             </div>
           </article>
