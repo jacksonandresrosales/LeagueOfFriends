@@ -9,10 +9,10 @@ type NavigationItem = 'Resumen' | 'Comparar' | 'Amigos' | 'Retos' | 'Clasificaci
 
 const navItems = [
   { label: 'Resumen' as const, icon: House, href: '/' },
-  { label: 'Comparar' as const, icon: ChartLineUp, href: '/#comparar' },
-  { label: 'Amigos' as const, icon: UsersThree, href: '/#amigos' },
-  { label: 'Retos' as const, icon: Sword, href: '/retos/nuevo' },
-  { label: 'Clasificación' as const, icon: Trophy, href: '/#clasificacion' },
+  { label: 'Comparar' as const, icon: ChartLineUp, href: '/comparar' },
+  { label: 'Amigos' as const, icon: UsersThree, href: '/amigos' },
+  { label: 'Retos' as const, icon: Sword, href: '/retos' },
+  { label: 'Clasificación' as const, icon: Trophy, href: '/clasificacion' },
 ];
 
 export function AppSidebar({ active }: { active: NavigationItem }) {
