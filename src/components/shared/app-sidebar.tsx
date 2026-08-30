@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { getSupabaseClient } from '@/lib/supabase/client';
 
-type NavigationItem = 'Resumen' | 'Comparar' | 'Amigos' | 'Retos' | 'Clasificación';
+type NavigationItem = 'Resumen' | 'Comparar' | 'Amigos' | 'Retos' | 'Clasificación' | 'Ajustes';
 
 const navItems = [
   { label: 'Resumen' as const, icon: House, href: '/' },
@@ -38,7 +38,9 @@ export function AppSidebar({ active }: { active: NavigationItem }) {
       </nav>
       <Link className="create-button" href="/retos/nuevo"><Plus size={20} weight="bold" /><span>Crear reto</span></Link>
       <div className="sidebar-footer">
-        <a className="nav-link" href="#ajustes"><GearSix size={21} weight="bold" /><span>Ajustes</span></a>
+        <Link className={active === 'Ajustes' ? 'nav-link is-active' : 'nav-link'} href="/vincular-riot">
+          <GearSix size={21} weight={active === 'Ajustes' ? 'fill' : 'bold'} /><span>Vincular Riot</span>
+        </Link>
         <button className="nav-link sign-out" type="button" onClick={handleSignOut}><SignOut size={21} weight="bold" /><span>Salir</span></button>
       </div>
     </aside>
