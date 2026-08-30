@@ -503,14 +503,22 @@ button:focus-visible, a:focus-visible { outline: 3px solid var(--accent-bright);
   .auth-brand-copy h1 { max-width: 13ch; font-size: clamp(47px, 13vw, 74px); }
   .auth-security-note { display: none; }
   .auth-form-panel { min-height: auto; padding: 42px 22px 58px; place-items: start center; }
-  .app-shell { display: block; padding-bottom: 70px; }
-  .sidebar { position: fixed; inset: auto 0 0; width: 100%; height: 68px; padding: 8px 12px; border: 0; border-top: 3px solid var(--line); flex-direction: row; }
+  .app-shell { display: block; padding-bottom: max(80px, calc(72px + env(safe-area-inset-bottom))); }
+  .sidebar { position: fixed; inset: auto 0 0; width: 100%; height: auto; min-height: 60px; padding: 6px 10px max(6px, env(safe-area-inset-bottom)); border: 0; border-top: 3px solid var(--line); flex-direction: row; z-index: 90; background: var(--surface); }
   .brand, .create-button, .sidebar-footer { display: none; }
-  .main-nav { margin: 0; width: 100%; display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; }
-  .nav-link { min-height: 47px; }
-  .dashboard-main { padding: 0 18px 35px; }
-  .topbar { min-height: 88px; }
+  .main-nav { margin: 0; width: 100%; display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
+  .nav-link { min-height: 48px; border: 2px solid transparent; }
+  .nav-link.is-active { border-color: var(--line); }
+  .dashboard-main { padding: 0 16px 35px; }
+  .topbar { min-height: 76px; }
   .topbar .eyebrow, .mini-profile { display: none; }
+  .profile-banner { min-height: auto; padding: 20px 16px; margin-bottom: 24px; }
+  .profile-banner-content { flex-direction: column; align-items: flex-start; gap: 16px; }
+  .profile-banner-left { flex-direction: column; align-items: flex-start; gap: 12px; }
+  .profile-banner-name { font-size: clamp(24px, 6vw, 36px); }
+  .profile-banner-meta { flex-wrap: wrap; }
+  .profile-banner-right { width: 100%; }
+  .mastery-card { width: 100%; }
   .profile-hero { padding-block: 24px; }
   .rank-emblem { width: 70px; height: 70px; }
   .rank-emblem svg { width: 51px; }
@@ -529,32 +537,30 @@ button:focus-visible, a:focus-visible { outline: 3px solid var(--accent-bright);
 
 @media (max-width: 520px) {
   .dashboard-main { padding-inline: 12px; }
-  .topbar h1 { font-size: 31px; }
-  .notification-button { display: none; }
+  .topbar h1 { font-size: 26px; }
   .profile-hero { grid-template-columns: 1fr; }
   .rank-emblem { width: 60px; height: 60px; }
   .season-goal { grid-column: auto; }
-  .profile-copy h2 { font-size: 48px; }
+  .profile-copy h2 { font-size: 40px; }
   .rank-line span:last-child { width: 100%; border: 0; padding: 0; }
-  .metrics { margin-block: 24px; }
-  .metric { min-height: 115px; padding: 15px; }
+  .metrics { margin-block: 20px; }
+  .metric { min-height: 105px; padding: 12px; }
   .panel-heading { display: grid; }
   .period-tabs { width: 100%; }
-  .period-tabs button { flex: 1; }
+  .period-tabs button { flex: 1; min-height: 44px; }
   .chart-legend { margin-left: 0; flex-wrap: wrap; }
-  .chart svg { height: 190px; }
-  .performance-panel { padding: 20px 15px 16px; }
-  .challenge-symbol { width: 54px; height: 54px; }
-  .challenge-panel { padding: 19px 16px; }
+  .chart svg { height: 180px; }
+  .performance-panel { padding: 18px 12px 14px; }
+  .challenge-symbol { width: 48px; height: 48px; }
+  .challenge-panel { padding: 16px 14px; }
   .challenge-intro > div { display: grid; }
-  .challenge-intro h2 { font-size: 36px; }
+  .challenge-intro h2 { font-size: 30px; }
   .challenge-steps span { justify-content: center; padding: 0 6px; font-size: 8px; }
-  .form-section { padding: 19px 15px; }
+  .form-section { padding: 18px 12px; }
   .challenge-type-grid { grid-template-columns: 1fr; }
-  .challenge-type { min-height: 95px; }
+  .challenge-type { min-height: 90px; }
   .field-row { grid-template-columns: 1fr; gap: 0; }
-  .friend-option { grid-template-columns: auto 38px 1fr auto; padding-inline: 8px; }
-  .challenge-summary { padding: 18px 15px; }
+  .challenge-summary { padding: 18px 14px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
