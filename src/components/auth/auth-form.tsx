@@ -10,11 +10,13 @@ import {
   Key,
   LockKey,
   ShieldCheck,
+  SignIn,
   UserPlus,
 } from '@phosphor-icons/react';
 import { FormEvent, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { SummonerCaptcha } from '@/components/auth/summoner-captcha';
 import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
 
 type Mode = 'sign-in' | 'sign-up' | 'reset';
@@ -28,6 +30,8 @@ export function AuthForm() {
   const [registeredEmail, setRegisteredEmail] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
+  const [captchaVerified, setCaptchaVerified] = useState(false);
+  const [emailAlreadyExists, setEmailAlreadyExists] = useState<string | null>(null);
   const [otpDigits, setOtpDigits] = useState<string[]>(['', '', '', '', '', '']);
   const otpInputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
@@ -51,6 +55,7 @@ export function AuthForm() {
     setOtpDigits(['', '', '', '', '', '']);
     setShowPassword(false);
     setShowConfirmation(false);
+    setEmailAlreadyExists(null);
     setMessage('');
     setError('');
   }
@@ -239,13 +244,48 @@ export function AuthForm() {
           return;
         }
 
+        if (!captchaVerified) {
+          setError('Por favor, completa la verificación de seguridad de invocador.');
+          setSubmitting(false);
+          return;
+        }
+
+        // 2.1 Verificar si el correo ya existe antes de intentar registrarlo
+        try {
+          const checkRes = await fetch('/api/auth/check-email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email }),
+          });
+          const checkData = await checkRes.json();
+          if (checkData.exists) {
+            setEmailAlreadyExists(email);
+            setError('');
+            setSubmitting(false);
+            return;
+          }
+        } catch {
+          // Si la comprobación de red falla, el backend de Supabase responderá
+        }
+
         const { error: signUpError } = await supabase.auth.signUp({
           email,
           password,
           options: { emailRedirectTo: window.location.origin },
         });
 
-        if (signUpError) throw signUpError;
+        if (signUpError) {
+          if (
+            signUpError.message?.toLowerCase().includes('already registered') ||
+            signUpError.message?.toLowerCase().includes('user already exists')
+          ) {
+            setEmailAlreadyExists(email);
+            setError('');
+            setSubmitting(false);
+            return;
+          }
+          throw signUpError;
+        }
 
         // Desconectamos cualquier sesión automática inmediata para dar el flujo de login manual solicitado
         await supabase.auth.signOut({ scope: 'local' });
@@ -253,6 +293,8 @@ export function AuthForm() {
         setMode('sign-in');
         setShowPassword(false);
         setShowConfirmation(false);
+        setCaptchaVerified(false);
+        setEmailAlreadyExists(null);
         setMessage('¡Cuenta creada con éxito! Ahora inicia sesión con tu correo y contraseña.');
         setSubmitting(false);
         return;
@@ -549,6 +591,56 @@ export function AuthForm() {
               ) : null}
             </>
           )}
+
+          {emailAlreadyExists ? (
+            <div className="email-exists-card" role="alert">
+              <div className="email-exists-header">
+                <ShieldCheck size={20} weight="fill" />
+                <span>Correo ya registrado</span>
+              </div>
+              <p className="email-exists-desc">
+                El correo <strong>{emailAlreadyExists}</strong> ya tiene una cuenta activa en LeagueOfFriends.
+              </p>
+              <div className="email-exists-buttons">
+                <button
+                  type="button"
+                  className="email-exists-btn-login"
+                  onClick={() => {
+                    const mail = emailAlreadyExists;
+                    setEmailAlreadyExists(null);
+                    setRegisteredEmail(mail);
+                    changeMode('sign-in');
+                  }}
+                >
+                  <SignIn size={16} weight="bold" />
+                  <span>Iniciar sesión</span>
+                </button>
+                <button
+                  type="button"
+                  className="email-exists-btn-reset"
+                  onClick={() => {
+                    const mail = emailAlreadyExists;
+                    setEmailAlreadyExists(null);
+                    setRecoveryEmail(mail);
+                    changeMode('reset');
+                  }}
+                >
+                  <Key size={16} weight="bold" />
+                  <span>Recuperar clave</span>
+                </button>
+              </div>
+            </div>
+          ) : null}
+
+          {mode === 'sign-up' && !emailAlreadyExists ? (
+            <SummonerCaptcha
+              verified={captchaVerified}
+              onVerify={() => {
+                setCaptchaVerified(true);
+                setError('');
+              }}
+            />
+          ) : null}
 
           <button className="auth-submit" type="submit" disabled={submitting}>
             <span>
