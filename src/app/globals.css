@@ -135,6 +135,141 @@ button:focus-visible, a:focus-visible { outline: 3px solid var(--accent-bright);
 .avatar-small { width: 43px; height: 43px; background: var(--accent); color: var(--on-accent); }
 
 .profile-hero { min-height: 187px; padding: 31px 0; display: grid; grid-template-columns: auto minmax(0, 1fr) minmax(230px, 300px); align-items: center; gap: 24px; border-bottom: 3px solid var(--line); }
+.profile-banner {
+  position: relative;
+  min-height: 210px;
+  margin: 28px 0 32px;
+  border: 3px solid var(--line);
+  box-shadow: var(--hard-shadow);
+  background-color: var(--surface);
+  background-size: cover;
+  background-position: center 20%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  overflow: hidden;
+}
+.profile-banner-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.72) 48%, rgba(0, 0, 0, 0.35) 100%);
+  z-index: 1;
+}
+.profile-banner-content {
+  position: relative;
+  z-index: 2;
+  padding: 24px 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+.profile-banner-left {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+.profile-banner-avatar {
+  position: relative;
+  width: 82px;
+  height: 82px;
+  flex-shrink: 0;
+  border: 3px solid var(--line);
+  background: var(--surface);
+  box-shadow: 4px 4px 0 var(--line);
+  overflow: hidden;
+}
+.profile-banner-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.profile-banner-level {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--line);
+  color: var(--on-accent);
+  font: 800 9px/1.2 var(--font-mono), monospace;
+  text-align: center;
+  padding: 2px 0;
+  text-transform: uppercase;
+}
+.profile-banner-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.profile-banner-name {
+  margin: 0;
+  font: 900 clamp(32px, 4vw, 54px)/0.88 var(--font-display), sans-serif;
+  letter-spacing: -0.025em;
+  text-transform: uppercase;
+  color: #fff;
+  text-shadow: 2px 2px 0 #000;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.profile-banner-tag {
+  color: var(--accent-bright);
+  font-size: 0.55em;
+  font-family: var(--font-mono), monospace;
+  text-shadow: 1px 1px 0 #000;
+}
+.profile-banner-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.profile-badge {
+  padding: 4px 10px;
+  border: 2px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  font: 800 11px/1 var(--font-mono), monospace;
+  text-transform: uppercase;
+  box-shadow: 2px 2px 0 var(--line);
+}
+.profile-badge-accent {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+.profile-banner-right {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.mastery-card {
+  padding: 12px 16px;
+  border: 2px solid var(--line);
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(4px);
+  color: #fff;
+  box-shadow: 3px 3px 0 var(--line);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.mastery-card small {
+  display: block;
+  font: 700 9px/1 var(--font-mono), monospace;
+  color: #aaa;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.mastery-card strong {
+  display: block;
+  margin-top: 3px;
+  font: 900 16px/1 var(--font-display), sans-serif;
+  text-transform: uppercase;
+  color: #fff;
+}
 .rank-emblem { position: relative; width: 91px; height: 91px; display: grid; place-items: center; background: var(--accent); border: 3px solid var(--line); box-shadow: var(--hard-shadow); color: var(--on-accent); }
 .rank-emblem span { position: absolute; font: 900 17px/1 var(--font-display), sans-serif; color: var(--accent); }
 .profile-copy h2 { margin: 0; font: 900 clamp(44px, 6vw, 68px)/.86 var(--font-display), sans-serif; text-transform: uppercase; letter-spacing: -.025em; }

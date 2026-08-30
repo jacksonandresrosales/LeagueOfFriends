@@ -2,6 +2,7 @@ import {
   PLATFORM_TO_REGIONAL,
   type PlatformRoute,
   type RiotAccountDto,
+  type RiotChampionMasteryDto,
   type RiotLeagueEntryDto,
   type RiotSummonerDto,
 } from './types';
@@ -91,4 +92,45 @@ export async function getLeagueEntriesByPuuid(
 ): Promise<RiotLeagueEntryDto[]> {
   const url = `https://${platform}.api.riotgames.com/lol/league/v4/entries/by-puuid/${encodeURIComponent(puuid)}`;
   return fetchRiot<RiotLeagueEntryDto[]>(url);
+}
+
+/**
+ * Obtiene los campeones con mayor maestría mediante Champion-Mastery-V4.
+ */
+export async function getTopChampionMasteriesByPuuid(
+  puuid: string,
+  platform: PlatformRoute,
+  count = 3,
+): Promise<RiotChampionMasteryDto[]> {
+  const url = `https://${platform}.api.riotgames.com/lol/champion-mastery/v4/champion-masteries/by-puuid/${encodeURIComponent(puuid)}/top?count=${count}`;
+  return fetchRiot<RiotChampionMasteryDto[]>(url);
+}
+
+let championMapCache: Record<string, string> | null = null;
+
+/**
+ * Resuelve el championId numérico de Riot al nombre identificador de Data Dragon (para splash arts).
+ */
+export async function getChampionKeyById(championId: number): Promise<string> {
+  if (championMapCache && championMapCache[String(championId)]) {
+    return championMapCache[String(championId)];
+  }
+
+  try {
+    const res = await fetch('https://ddragon.leagueoflegends.com/cdn/15.4.1/data/en_US/champion.json', {
+      next: { revalidate: 86400 },
+    });
+    if (res.ok) {
+      const data = await res.json();
+      championMapCache = {};
+      for (const champ of Object.values(data.data as Record<string, { key: string; id: string }>)) {
+        championMapCache[champ.key] = champ.id;
+      }
+      return championMapCache[String(championId)] || 'Vayne';
+    }
+  } catch {
+    // Fallback silencioso
+  }
+
+  return 'Vayne';
 }

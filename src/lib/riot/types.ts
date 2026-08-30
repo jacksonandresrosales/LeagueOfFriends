@@ -64,3 +64,11 @@ export interface RiotLeagueEntryDto {
   freshBlood: boolean;
   inactive: boolean;
 }
+
+export interface RiotChampionMasteryDto {
+  puuid: string;
+  championId: number;
+  championLevel: number;
+  championPoints: number;
+  lastPlayTime: number;
+}

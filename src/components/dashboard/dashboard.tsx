@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 'use client';
 
 import {
@@ -5,6 +6,7 @@ import {
   Bell,
   Check,
   Crosshair,
+  Flame,
   GameController,
   ShieldChevron,
   Trophy,
@@ -23,6 +25,20 @@ const periods: Period[] = ['Día', 'Semana', 'Mes'];
 type RiotAccountRow = Database['public']['Tables']['riot_accounts']['Row'];
 type RankedSnapshotRow = Database['public']['Tables']['ranked_snapshots']['Row'];
 type ProfileRow = Database['public']['Tables']['profiles']['Row'];
+
+interface RiotSummary {
+  gameName: string;
+  tagLine: string;
+  platform: string;
+  summonerLevel: number;
+  profileIconUrl: string;
+  splashArtUrl: string;
+  topChampion: {
+    name: string;
+    points: number;
+    level: number;
+  };
+}
 
 const periodData: Record<Period, { lp: string; games: string; wins: string; rate: string; playerPath: string; rivalPath: string }> = {
   Día: {
@@ -73,6 +89,7 @@ export function Dashboard() {
   const [profile, setProfile] = useState<ProfileRow | null>(null);
   const [riotAccount, setRiotAccount] = useState<RiotAccountRow | null>(null);
   const [snapshot, setSnapshot] = useState<RankedSnapshotRow | null>(null);
+  const [riotSummary, setRiotSummary] = useState<RiotSummary | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -117,6 +134,23 @@ export function Dashboard() {
         if (snapshotData) {
           setSnapshot(snapshotData);
         }
+
+        // 4. Cargar resumen enriquecido de Riot Games (splash art, profile icon, top champion)
+        try {
+          const { data: sessionData } = await supabase.auth.getSession();
+          const token = sessionData.session?.access_token;
+          if (token) {
+            const summaryRes = await fetch('/api/riot/summary', {
+              headers: { Authorization: `Bearer ${token}` },
+            });
+            if (summaryRes.ok) {
+              const summaryJson = await summaryRes.json();
+              setRiotSummary(summaryJson);
+            }
+          }
+        } catch {
+          // Si falla, se muestra la vista estándar
+        }
       }
 
       setLoading(false);
@@ -149,7 +183,17 @@ export function Dashboard() {
             <button className="icon-button notification-button" type="button" aria-label="Ver notificaciones"><Bell size={20} weight="bold" /><span className="notification-dot" /></button>
             <ThemeToggle />
             <div className="mini-profile" aria-label={`Perfil de ${displayName}`}>
-              <span className="avatar avatar-small">{initials}</span>
+              {riotSummary?.profileIconUrl ? (
+                <img
+                  src={riotSummary.profileIconUrl}
+                  alt={displayName}
+                  width={38}
+                  height={38}
+                  style={{ border: '2px solid var(--line)', background: 'var(--surface)' }}
+                />
+              ) : (
+                <span className="avatar avatar-small">{initials}</span>
+              )}
               <span><strong>{displayName}</strong><small>{tagLine}</small></span>
             </div>
           </div>
@@ -173,26 +217,72 @@ export function Dashboard() {
           </section>
         ) : null}
 
-        <section className="profile-hero" aria-labelledby="profile-name">
-          <div className="rank-emblem" aria-hidden="true">
-            <ShieldChevron size={66} weight="fill" />
-            <span>{rankInitials}</span>
-          </div>
-          <div className="profile-copy">
-            <p className="eyebrow">Invocador principal</p>
-            <h2 id="profile-name">{displayName}<span>{tagLine}</span></h2>
-            <div className="rank-line">
-              <strong>{rankName}</strong>
-              <span>{lp} LP</span>
-              <span className="positive">{totalGames > 0 ? `${wins}V - ${losses}D (${winRate}%)` : 'Sin partidas registradas'}</span>
+        {riotSummary ? (
+          <section
+            className="profile-banner"
+            style={{ backgroundImage: `url(${riotSummary.splashArtUrl})` }}
+            aria-label={`Banner de ${displayName}`}
+          >
+            <div className="profile-banner-overlay" />
+            <div className="profile-banner-content">
+              <div className="profile-banner-left">
+                <div className="profile-banner-avatar">
+                  <img
+                    src={riotSummary.profileIconUrl}
+                    alt={`Ícono de invocador de ${displayName}`}
+                    width={82}
+                    height={82}
+                  />
+                  <span className="profile-banner-level">NVL {riotSummary.summonerLevel}</span>
+                </div>
+                <div className="profile-banner-info">
+                  <h2 className="profile-banner-name">
+                    {displayName}
+                    <span className="profile-banner-tag">{tagLine} ({riotSummary.platform})</span>
+                  </h2>
+                  <div className="profile-banner-meta">
+                    <span className="profile-badge profile-badge-accent">{rankName}</span>
+                    <span className="profile-badge">{lp} LP</span>
+                    <span className="profile-badge">
+                      {totalGames > 0 ? `${wins}V - ${losses}D (${winRate}%)` : 'Solo/Duo'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="profile-banner-right">
+                <div className="mastery-card">
+                  <Flame size={28} weight="fill" style={{ color: 'var(--accent-bright)' }} />
+                  <div>
+                    <small>Campeón Principal</small>
+                    <strong>{riotSummary.topChampion.name} · {riotSummary.topChampion.points.toLocaleString()} PTS</strong>
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
-          <div className="season-goal">
-            <span className="eyebrow">Objetivo de temporada</span><strong>Esmeralda IV</strong>
-            <div className="progress-track"><span style={{ width: `${Math.min(100, Math.max(10, winRate))}%` }} /></div>
-            <small>{winRate}% win rate en clasificatorias</small>
-          </div>
-        </section>
+          </section>
+        ) : (
+          <section className="profile-hero" aria-labelledby="profile-name">
+            <div className="rank-emblem" aria-hidden="true">
+              <ShieldChevron size={66} weight="fill" />
+              <span>{rankInitials}</span>
+            </div>
+            <div className="profile-copy">
+              <p className="eyebrow">Invocador principal</p>
+              <h2 id="profile-name">{displayName}<span>{tagLine}</span></h2>
+              <div className="rank-line">
+                <strong>{rankName}</strong>
+                <span>{lp} LP</span>
+                <span className="positive">{totalGames > 0 ? `${wins}V - ${losses}D (${winRate}%)` : 'Sin partidas registradas'}</span>
+              </div>
+            </div>
+            <div className="season-goal">
+              <span className="eyebrow">Objetivo de temporada</span><strong>Esmeralda IV</strong>
+              <div className="progress-track"><span style={{ width: `${Math.min(100, Math.max(10, winRate))}%` }} /></div>
+              <small>{winRate}% win rate en clasificatorias</small>
+            </div>
+          </section>
+        )}
 
         <section className="metrics" aria-label="Métricas principales">
           <article className="metric metric-featured">
@@ -237,7 +327,17 @@ export function Dashboard() {
             <ol className="friends-list">
               <li className="current-user">
                 <span className="place">01</span>
-                <span className="avatar avatar-red">{initials}</span>
+                {riotSummary?.profileIconUrl ? (
+                  <img
+                    src={riotSummary.profileIconUrl}
+                    alt={displayName}
+                    width={38}
+                    height={38}
+                    style={{ border: '2px solid var(--line)', background: 'var(--surface)' }}
+                  />
+                ) : (
+                  <span className="avatar avatar-red">{initials}</span>
+                )}
                 <span className="friend-name"><strong>{displayName}</strong><small>{tagLine}</small></span>
                 <strong className="friend-lp">{lp} LP</strong>
               </li>
