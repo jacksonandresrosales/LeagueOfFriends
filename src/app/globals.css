@@ -230,13 +230,18 @@ button:focus-visible, a:focus-visible { outline: 3px solid var(--accent-bright);
   flex-wrap: wrap;
 }
 .profile-badge {
-  padding: 4px 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
   border: 2px solid var(--line);
   background: var(--surface);
   color: var(--ink);
   font: 800 11px/1 var(--font-mono), monospace;
   text-transform: uppercase;
   box-shadow: 2px 2px 0 var(--line);
+  white-space: nowrap;
+  vertical-align: middle;
 }
 .profile-badge-accent {
   background: var(--accent);

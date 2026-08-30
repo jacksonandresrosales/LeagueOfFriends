@@ -418,58 +418,59 @@ export function CompareView() {
             <table style={{ width: '100%', borderCollapse: 'collapse', font: '800 13px/1 var(--font-mono)' }}>
               <thead>
                 <tr style={{ borderBottom: '3px solid var(--line)', background: 'var(--surface-alt)' }}>
-                  <th style={{ padding: '14px 16px', textAlign: 'left' }}>MÉTRICA</th>
-                  <th style={{ padding: '14px 16px', textAlign: 'center', color: 'var(--accent)' }}>{p1.displayName}</th>
-                  <th style={{ padding: '14px 16px', textAlign: 'center' }}>{p2.displayName}</th>
-                  <th style={{ padding: '14px 16px', textAlign: 'right' }}>VENTAJA</th>
+                  <th style={{ padding: '14px 16px', textAlign: 'left', whiteSpace: 'nowrap' }}>MÉTRICA</th>
+                  <th style={{ padding: '14px 16px', textAlign: 'center', color: 'var(--accent)', whiteSpace: 'nowrap' }}>{p1.displayName}</th>
+                  <th style={{ padding: '14px 16px', textAlign: 'center', whiteSpace: 'nowrap' }}>{p2.displayName}</th>
+                  <th style={{ padding: '14px 16px', textAlign: 'right', whiteSpace: 'nowrap' }}>VENTAJA</th>
                 </tr>
               </thead>
               <tbody>
                 <tr style={{ borderBottom: '2px solid var(--line)' }}>
-                  <td style={{ padding: '14px 16px' }}>RANGO Y DIVISIÓN</td>
-                  <td style={{ padding: '14px 16px', textAlign: 'center' }}>{formatTierName(p1.tier, p1.division)}</td>
-                  <td style={{ padding: '14px 16px', textAlign: 'center' }}>{formatTierName(p2.tier, p2.division)}</td>
-                  <td style={{ padding: '14px 16px', textAlign: 'right' }}>
+                  <td style={{ padding: '14px 16px', whiteSpace: 'nowrap' }}>RANGO Y DIVISIÓN</td>
+                  <td style={{ padding: '14px 16px', textAlign: 'center', whiteSpace: 'nowrap' }}>{formatTierName(p1.tier, p1.division)}</td>
+                  <td style={{ padding: '14px 16px', textAlign: 'center', whiteSpace: 'nowrap' }}>{formatTierName(p2.tier, p2.division)}</td>
+                  <td style={{ padding: '14px 16px', textAlign: 'right', whiteSpace: 'nowrap' }}>
                     <span className="profile-badge">{p2.tier === 'PLATINUM' ? p2.displayName : p1.displayName}</span>
                   </td>
                 </tr>
                 <tr style={{ borderBottom: '2px solid var(--line)' }}>
-                  <td style={{ padding: '14px 16px' }}>PUNTOS DE LIGA (LP)</td>
-                  <td style={{ padding: '14px 16px', textAlign: 'center' }}>{p1.lp} LP</td>
-                  <td style={{ padding: '14px 16px', textAlign: 'center' }}>{p2.lp} LP</td>
-                  <td style={{ padding: '14px 16px', textAlign: 'right' }}>
+                  <td style={{ padding: '14px 16px', whiteSpace: 'nowrap' }}>PUNTOS DE LIGA (LP)</td>
+                  <td style={{ padding: '14px 16px', textAlign: 'center', whiteSpace: 'nowrap' }}>{p1.lp} LP</td>
+                  <td style={{ padding: '14px 16px', textAlign: 'center', whiteSpace: 'nowrap' }}>{p2.lp} LP</td>
+                  <td style={{ padding: '14px 16px', textAlign: 'right', whiteSpace: 'nowrap' }}>
                     <span className="profile-badge profile-badge-accent">
                       {p1.lp >= p2.lp ? `+${p1.lp - p2.lp} LP (${p1.displayName})` : `+${p2.lp - p1.lp} LP (${p2.displayName})`}
                     </span>
                   </td>
                 </tr>
                 <tr style={{ borderBottom: '2px solid var(--line)' }}>
-                  <td style={{ padding: '14px 16px' }}>WIN RATE EN CLASIFICATORIAS</td>
-                  <td style={{ padding: '14px 16px', textAlign: 'center' }}>{p1.winRate}%</td>
-                  <td style={{ padding: '14px 16px', textAlign: 'center' }}>{p2.winRate}%</td>
-                  <td style={{ padding: '14px 16px', textAlign: 'right' }}>
+                  <td style={{ padding: '14px 16px', whiteSpace: 'nowrap' }}>WIN RATE EN CLASIFICATORIAS</td>
+                  <td style={{ padding: '14px 16px', textAlign: 'center', whiteSpace: 'nowrap' }}>{p1.winRate}%</td>
+                  <td style={{ padding: '14px 16px', textAlign: 'center', whiteSpace: 'nowrap' }}>{p2.winRate}%</td>
+                  <td style={{ padding: '14px 16px', textAlign: 'right', whiteSpace: 'nowrap' }}>
                     <span className="profile-badge">
                       {p1.winRate >= p2.winRate ? `+${p1.winRate - p2.winRate}% (${p1.displayName})` : `+${p2.winRate - p1.winRate}% (${p2.displayName})`}
                     </span>
                   </td>
                 </tr>
                 <tr style={{ borderBottom: '2px solid var(--line)' }}>
-                  <td style={{ padding: '14px 16px' }}>BALANCE DE VICTORIAS</td>
-                  <td style={{ padding: '14px 16px', textAlign: 'center' }}>{p1.wins}V - {p1.losses}D</td>
-                  <td style={{ padding: '14px 16px', textAlign: 'center' }}>{p2.wins}V - {p2.losses}D</td>
-                  <td style={{ padding: '14px 16px', textAlign: 'right' }}>
+                  <td style={{ padding: '14px 16px', whiteSpace: 'nowrap' }}>BALANCE DE VICTORIAS</td>
+                  <td style={{ padding: '14px 16px', textAlign: 'center', whiteSpace: 'nowrap' }}>{p1.wins}V - {p1.losses}D</td>
+                  <td style={{ padding: '14px 16px', textAlign: 'center', whiteSpace: 'nowrap' }}>{p2.wins}V - {p2.losses}D</td>
+                  <td style={{ padding: '14px 16px', textAlign: 'right', whiteSpace: 'nowrap' }}>
                     <span className="profile-badge">
                       {p1.wins >= p2.wins ? `${p1.displayName} (+${p1.wins - p2.wins} V)` : `${p2.displayName} (+${p2.wins - p1.wins} V)`}
                     </span>
                   </td>
                 </tr>
                 <tr>
-                  <td style={{ padding: '14px 16px' }}>CAMPEÓN MÁS JUGADO</td>
-                  <td style={{ padding: '14px 16px', textAlign: 'center' }}>{p1.topChampionName || 'Vayne'}</td>
-                  <td style={{ padding: '14px 16px', textAlign: 'center' }}>{p2.topChampionName || 'Yasuo'}</td>
-                  <td style={{ padding: '14px 16px', textAlign: 'right' }}>
+                  <td style={{ padding: '14px 16px', whiteSpace: 'nowrap' }}>CAMPEÓN MÁS JUGADO</td>
+                  <td style={{ padding: '14px 16px', textAlign: 'center', whiteSpace: 'nowrap' }}>{p1.topChampionName || 'Vayne'}</td>
+                  <td style={{ padding: '14px 16px', textAlign: 'center', whiteSpace: 'nowrap' }}>{p2.topChampionName || 'Yasuo'}</td>
+                  <td style={{ padding: '14px 16px', textAlign: 'right', whiteSpace: 'nowrap' }}>
                     <span className="profile-badge profile-badge-accent">
-                      <Flame size={12} weight="fill" /> {p1.displayName} (1M PTS)
+                      <Flame size={14} weight="fill" />
+                      <span>{p1.displayName} (1M PTS)</span>
                     </span>
                   </td>
                 </tr>
