@@ -408,9 +408,10 @@ export function CompareView() {
               <span
                 style={{
                   font: '800 11px/1 var(--font-mono)',
-                  background: 'var(--line)',
-                  color: 'var(--on-accent)',
-                  padding: '3px 8px',
+                  background: 'rgba(0, 0, 0, 0.4)',
+                  color: '#ffffff',
+                  border: '1px solid rgba(255, 255, 255, 0.3)',
+                  padding: '4px 8px',
                 }}
               >
                 {p1.tagLine.replace('#', '')}
@@ -468,9 +469,10 @@ export function CompareView() {
               <span
                 style={{
                   font: '800 11px/1 var(--font-mono)',
-                  background: 'var(--line)',
-                  color: 'var(--surface)',
-                  padding: '3px 8px',
+                  background: 'var(--surface)',
+                  color: 'var(--ink)',
+                  border: '1px solid var(--line)',
+                  padding: '4px 8px',
                 }}
               >
                 {p2.tagLine.replace('#', '')}
