@@ -100,7 +100,7 @@ export function AuthForm() {
       if (!res.ok) {
         setError(data.error || 'Error al reenviar el código.');
       } else {
-        setMessage('Hemos reenviado un nuevo código a tu correo.');
+        setMessage('Hemos enviado un nuevo código de 6 dígitos a tu correo.');
         setResendCooldown(60);
       }
     } catch {
@@ -130,7 +130,7 @@ export function AuthForm() {
     const supabase = getSupabaseClient();
 
     try {
-      // 1. FLUJO DE RECUPERACIÓN DE CONTRASEÑA CON OTP Y RESEND
+      // 1. FLUJO DE RECUPERACIÓN DE CONTRASEÑA CON OTP DE 6 DÍGITOS Y RESEND
       if (mode === 'reset') {
         // Paso 1: Enviar código al correo
         if (resetStep === 'email') {
@@ -157,12 +157,12 @@ export function AuthForm() {
           setRecoveryEmail(email);
           setResetStep('otp');
           setResendCooldown(60);
-          setMessage(`Código de verificación enviado a ${email}.`);
+          setMessage(`Código de 6 dígitos enviado a ${email}.`);
           setSubmitting(false);
           return;
         }
 
-        // Paso 2: Verificar código OTP de 6 dígitos
+        // Paso 2: Validar que se ingresaron los 6 dígitos
         if (resetStep === 'otp') {
           const otpCode = otpDigits.join('');
           if (otpCode.length < 6) {
@@ -171,25 +171,13 @@ export function AuthForm() {
             return;
           }
 
-          const { error: otpError } = await supabase.auth.verifyOtp({
-            email: recoveryEmail,
-            token: otpCode,
-            type: 'recovery',
-          });
-
-          if (otpError) {
-            setError('El código ingresado es incorrecto o ya expiró.');
-            setSubmitting(false);
-            return;
-          }
-
           setResetStep('password');
-          setMessage('Código verificado con éxito. Ahora elige tu nueva contraseña.');
+          setMessage('Código listo. Ahora ingresa tu nueva contraseña.');
           setSubmitting(false);
           return;
         }
 
-        // Paso 3: Establecer nueva contraseña
+        // Paso 3: Guardar nueva contraseña validando el OTP en el backend
         if (resetStep === 'password') {
           if (!password || password.length < 6) {
             setError('La contraseña debe tener al menos 6 caracteres.');
@@ -203,12 +191,21 @@ export function AuthForm() {
             return;
           }
 
-          const { error: updateError } = await supabase.auth.updateUser({
-            password,
+          const otpCode = otpDigits.join('');
+          const res = await fetch('/api/auth/reset-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              email: recoveryEmail,
+              code: otpCode,
+              password,
+            }),
           });
 
-          if (updateError) {
-            setError('No se pudo actualizar la contraseña. Intenta nuevamente.');
+          const data = await res.json();
+
+          if (!res.ok) {
+            setError(data.error || 'No se pudo actualizar la contraseña.');
             setSubmitting(false);
             return;
           }
@@ -286,7 +283,7 @@ export function AuthForm() {
         <>
           <h2>Recupera el acceso</h2>
           <p className="auth-description">
-            Ingresa tu correo y te enviaremos un código de verificación de 6 dígitos mediante Resend.
+            Ingresa tu correo y te enviaremos un código de verificación de 6 dígitos a tu bandeja.
           </p>
         </>
       ) : mode === 'sign-up' ? (
@@ -480,7 +477,7 @@ export function AuthForm() {
               {submitting
                 ? 'Procesando...'
                 : mode === 'reset' && resetStep === 'otp'
-                  ? 'Verificar código'
+                  ? 'Continuar'
                   : mode === 'reset' && resetStep === 'password'
                     ? 'Guardar contraseña'
                     : mode === 'reset'

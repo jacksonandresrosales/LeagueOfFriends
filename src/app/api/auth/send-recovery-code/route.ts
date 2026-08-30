@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { getResendClient } from '@/lib/email/client';
 import { getPasswordResetEmailHtml } from '@/lib/email/templates';
@@ -17,27 +18,28 @@ export async function POST(request: NextRequest) {
 
     const supabaseAdmin = getSupabaseAdminClient();
 
-    // 1. Generar OTP de recuperación nativo en Supabase Auth
-    const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
-      type: 'recovery',
+    // 1. Generar código de 6 dígitos numéricos exactos (ej. 492810)
+    const otpCode = crypto.randomInt(100000, 1000000).toString();
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+
+    // 2. Guardar en la tabla recovery_codes (limpiando códigos previos del mismo correo)
+    await supabaseAdmin.from('recovery_codes').delete().eq('email', email);
+    const { error: insertError } = await supabaseAdmin.from('recovery_codes').insert({
       email,
+      code: otpCode,
+      expires_at: expiresAt,
     });
 
-    if (linkError || !linkData?.properties?.email_otp) {
-      // Por seguridad, responder de forma genérica o amigable
-      return NextResponse.json({
-        ok: true,
-        message: 'Si el correo está registrado, recibirás un código de verificación en breve.',
-      });
+    if (insertError) {
+      return NextResponse.json(
+        { error: 'Error al generar el código de recuperación.' },
+        { status: 500 },
+      );
     }
 
-    const otpCode = linkData.properties.email_otp;
-
-    // 2. Enviar correo mediante Resend
+    // 3. Enviar correo mediante Resend
     const resend = getResendClient();
 
-    // En plan dev de Resend, enviamos a jacksonandresrosales@gmail.com o al email si es el mismo
-    // o al email del usuario cuando esté en producción con dominio verificado.
     const { error: resendError } = await resend.emails.send({
       from: 'LeagueOfFriends <onboarding@resend.dev>',
       to: email,
@@ -54,7 +56,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       ok: true,
-      message: 'Código de verificación enviado a tu correo.',
+      message: 'Código de 6 dígitos enviado exitosamente a tu correo.',
     });
   } catch {
     return NextResponse.json(
