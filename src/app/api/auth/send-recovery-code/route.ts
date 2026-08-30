@@ -23,8 +23,10 @@ export async function POST(request: NextRequest) {
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
 
     // 2. Guardar en la tabla recovery_codes (limpiando códigos previos del mismo correo)
-    await supabaseAdmin.from('recovery_codes').delete().eq('email', email);
-    const { error: insertError } = await supabaseAdmin.from('recovery_codes').insert({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const recoveryTable = (supabaseAdmin as any).from('recovery_codes');
+    await recoveryTable.delete().eq('email', email);
+    const { error: insertError } = await recoveryTable.insert({
       email,
       code: otpCode,
       expires_at: expiresAt,

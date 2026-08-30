@@ -100,7 +100,16 @@ export function ChallengesListView() {
             const targetVal = ch.target_value || 100;
 
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const parts: ChallengeParticipant[] = (ch.participants || []).map((p: any) => {
+            const rawParticipants: any[] = Array.isArray((ch as any).participants)
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              ? (ch as any).participants
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              : (ch as any).participants
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                ? [(ch as any).participants]
+                : [];
+
+            const parts: ChallengeParticipant[] = rawParticipants.map((p) => {
               const name = p.riot_account?.game_name || p.profile?.display_name || 'Invocador';
               const tag = p.riot_account ? `#${p.riot_account.tag_line}` : '#LAN';
               const curVal = p.current_value || 0;
@@ -134,7 +143,7 @@ export function ChallengesListView() {
 
             const isCreatedByMe = ch.creator_id === currentUserId;
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const myParticipation = (ch.participants || []).find((p: any) => p.profile_id === currentUserId);
+            const myParticipation = rawParticipants.find((p) => p.profile_id === currentUserId);
             const isPending = myParticipation?.status === 'invited';
 
             const challengeStatus: 'active' | 'pending_acceptance' | 'completed' = isCompleted

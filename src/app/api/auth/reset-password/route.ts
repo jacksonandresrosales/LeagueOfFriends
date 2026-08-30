@@ -25,7 +25,8 @@ export async function POST(request: NextRequest) {
     const supabaseAdmin = getSupabaseAdminClient();
 
     // 1. Validar el código de 6 dígitos en la base de datos
-    const { data: record, error: fetchError } = await supabaseAdmin
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: record, error: fetchError } = await (supabaseAdmin as any)
       .from('recovery_codes')
       .select('*')
       .eq('email', email)
@@ -72,7 +73,8 @@ export async function POST(request: NextRequest) {
     }
 
     // 4. Eliminar el código de recuperación usado
-    await supabaseAdmin.from('recovery_codes').delete().eq('email', email);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (supabaseAdmin as any).from('recovery_codes').delete().eq('email', email);
 
     return NextResponse.json({
       ok: true,

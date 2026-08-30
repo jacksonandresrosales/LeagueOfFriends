@@ -104,7 +104,7 @@ export function NotificationBell() {
     await supabase
       .from('notifications')
       .update({ read_at: new Date().toISOString() })
-      .eq('id', id);
+      .eq('id', Number(id));
 
     setNotifications((prev) =>
       prev.map((n) => (n.id === id ? { ...n, read_at: new Date().toISOString() } : n)),
@@ -113,7 +113,7 @@ export function NotificationBell() {
 
   async function handleDismiss(id: string | number) {
     const supabase = getSupabaseClient();
-    await supabase.from('notifications').delete().eq('id', id);
+    await supabase.from('notifications').delete().eq('id', Number(id));
     setNotifications((prev) => prev.filter((n) => n.id !== id));
   }
 

@@ -111,7 +111,8 @@ export async function POST(request: NextRequest) {
 
     // 6. Encolar trabajo de sincronización inicial en private.sync_jobs
     try {
-      await supabase.schema('private').from('sync_jobs').insert({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (supabase as any).schema('private').from('sync_jobs').insert({
         riot_account_id: savedAccount.id,
         reason: 'initial_account_link',
         status: 'pending',

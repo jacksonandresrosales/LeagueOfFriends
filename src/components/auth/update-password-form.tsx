@@ -1,7 +1,7 @@
 'use client';
 
 import { ArrowLeft, ArrowRight, Check, EnvelopeSimple, Key, LockKey, ShieldCheck } from '@phosphor-icons/react';
-import { FormEvent, useRef, useState } from 'react';
+import { FormEvent, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 
 export function UpdatePasswordForm() {
