@@ -356,7 +356,7 @@ export function FriendsView() {
         </section>
 
         {/* Pestañas de Gestión de Amigos */}
-        <div className="period-tabs" style={{ marginBottom: '20px', width: 'fit-content' }}>
+        <div className="neo-tabs" style={{ marginBottom: '24px' }}>
           <button
             type="button"
             className={activeTab === 'friends' ? 'is-active' : ''}

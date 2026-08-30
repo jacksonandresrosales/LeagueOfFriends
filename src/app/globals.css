@@ -302,6 +302,41 @@ button:focus-visible, a:focus-visible { outline: 3px solid var(--accent-bright);
 .period-tabs button { min-width: 68px; height: 34px; border: 0; border-right: 2px solid var(--line); background: var(--surface); cursor: pointer; font: 700 9px/1 var(--font-mono), monospace; text-transform: uppercase; }
 .period-tabs button:last-child { border-right: 0; }
 .period-tabs button:hover, .period-tabs button.is-active { background: var(--accent); color: var(--on-accent); }
+.neo-tabs {
+  display: inline-flex;
+  border: 2px solid var(--line);
+  background: var(--surface);
+  box-shadow: 3px 3px 0 var(--line);
+  flex-wrap: wrap;
+}
+.neo-tabs button {
+  min-height: 44px;
+  padding: 0 24px;
+  border: 0;
+  border-right: 2px solid var(--line);
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+  font: 800 11px/1 var(--font-mono), monospace;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: background-color 140ms ease, color 140ms ease;
+}
+.neo-tabs button:last-child {
+  border-right: 0;
+}
+.neo-tabs button:hover {
+  background: var(--surface-alt);
+  color: var(--ink);
+}
+.neo-tabs button.is-active {
+  background: var(--accent);
+  color: var(--on-accent);
+}
 .chart-legend { display: flex; gap: 24px; margin: 24px 0 6px 45px; color: var(--muted); font: 700 10px/1 var(--font-mono), monospace; text-transform: uppercase; }
 .chart-legend span { display: flex; align-items: center; gap: 6px; }
 .chart-legend strong { color: var(--ink); margin-left: 3px; }
