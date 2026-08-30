@@ -1,12 +1,14 @@
 'use client';
 
-import { ArrowLeft, ArrowRight, Check, EnvelopeSimple, Key, LockKey, ShieldCheck } from '@phosphor-icons/react';
+import { ArrowLeft, ArrowRight, Check, EnvelopeSimple, Eye, EyeSlash, Key, LockKey, ShieldCheck } from '@phosphor-icons/react';
 import { FormEvent, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 
 export function UpdatePasswordForm() {
   const [step, setStep] = useState<'email' | 'code' | 'success'>('email');
   const [email, setEmail] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmation, setShowConfirmation] = useState(false);
   const [otpDigits, setOtpDigits] = useState<string[]>(['', '', '', '', '', '']);
   const otpInputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const [password, setPassword] = useState('');
@@ -229,12 +231,21 @@ export function UpdatePasswordForm() {
                   <LockKey size={18} weight="bold" />
                   <input
                     id="new-password"
-                    type="password"
+                    type={showPassword ? 'text' : 'password'}
                     placeholder="Mínimo 6 caracteres"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
                   />
+                  <button
+                    type="button"
+                    className="auth-password-toggle"
+                    onClick={() => setShowPassword(!showPassword)}
+                    aria-label={showPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
+                    title={showPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
+                  >
+                    {showPassword ? <EyeSlash size={18} weight="bold" /> : <Eye size={18} weight="bold" />}
+                  </button>
                 </div>
               </div>
 
@@ -246,12 +257,21 @@ export function UpdatePasswordForm() {
                   <Key size={18} weight="bold" />
                   <input
                     id="new-confirmation"
-                    type="password"
+                    type={showConfirmation ? 'text' : 'password'}
                     placeholder="Repite tu contraseña"
                     value={confirmation}
                     onChange={(e) => setConfirmation(e.target.value)}
                     required
                   />
+                  <button
+                    type="button"
+                    className="auth-password-toggle"
+                    onClick={() => setShowConfirmation(!showConfirmation)}
+                    aria-label={showConfirmation ? 'Ocultar contraseña' : 'Ver contraseña'}
+                    title={showConfirmation ? 'Ocultar contraseña' : 'Ver contraseña'}
+                  >
+                    {showConfirmation ? <EyeSlash size={18} weight="bold" /> : <Eye size={18} weight="bold" />}
+                  </button>
                 </div>
               </div>
 

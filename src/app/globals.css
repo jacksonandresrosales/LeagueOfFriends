@@ -66,6 +66,9 @@ button:focus-visible, a:focus-visible { outline: 3px solid var(--accent-bright);
 .field-group .auth-input input:hover,
 .auth-input input:hover { background: transparent !important; }
 .auth-input input::placeholder { color: var(--muted); opacity: 1; }
+.auth-password-toggle { background: transparent !important; border: 0 !important; padding: 6px !important; margin: 0 !important; display: inline-flex; align-items: center; justify-content: center; color: var(--muted) !important; cursor: pointer; border-radius: 0; outline: none; box-shadow: none !important; }
+.auth-password-toggle:hover, .auth-password-toggle:focus-visible { color: var(--ink) !important; }
+.auth-password-toggle svg { color: inherit !important; }
 .auth-submit { width: 100%; min-height: 53px; margin-top: 8px; border: 3px solid var(--line); background: var(--accent); color: var(--on-accent); box-shadow: 5px 5px 0 var(--line); display: flex; align-items: center; justify-content: center; gap: 9px; cursor: pointer; font: 800 17px/1 var(--font-display), sans-serif; text-transform: uppercase; letter-spacing: .045em; }
 .auth-submit:hover:not(:disabled) { background: var(--accent-bright); transform: translate(2px, 2px); box-shadow: 3px 3px 0 var(--line); }
 .auth-submit:disabled { cursor: wait; opacity: .68; box-shadow: none; }

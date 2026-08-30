@@ -142,7 +142,6 @@ export function ChallengesListView() {
             }
 
             const isCreatedByMe = ch.creator_id === currentUserId;
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const myParticipation = rawParticipants.find((p) => p.profile_id === currentUserId);
             const isPending = myParticipation?.status === 'invited';
 

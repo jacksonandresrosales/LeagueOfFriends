@@ -5,6 +5,8 @@ import {
   ArrowRight,
   Check,
   EnvelopeSimple,
+  Eye,
+  EyeSlash,
   Key,
   LockKey,
   ShieldCheck,
@@ -23,6 +25,9 @@ export function AuthForm() {
   const [mode, setMode] = useState<Mode>('sign-in');
   const [resetStep, setResetStep] = useState<ResetStep>('email');
   const [recoveryEmail, setRecoveryEmail] = useState('');
+  const [registeredEmail, setRegisteredEmail] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmation, setShowConfirmation] = useState(false);
   const [otpDigits, setOtpDigits] = useState<string[]>(['', '', '', '', '', '']);
   const otpInputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
@@ -44,6 +49,8 @@ export function AuthForm() {
     setMode(nextMode);
     setResetStep('email');
     setOtpDigits(['', '', '', '', '', '']);
+    setShowPassword(false);
+    setShowConfirmation(false);
     setMessage('');
     setError('');
   }
@@ -220,13 +227,19 @@ export function AuthForm() {
 
       // 2. REGISTRO
       if (mode === 'sign-up') {
+        if (!password || password.length < 6) {
+          setError('La contraseña debe tener al menos 6 caracteres.');
+          setSubmitting(false);
+          return;
+        }
+
         if (password !== confirmation) {
           setError('Las contraseñas no coinciden.');
           setSubmitting(false);
           return;
         }
 
-        const { data, error: signUpError } = await supabase.auth.signUp({
+        const { error: signUpError } = await supabase.auth.signUp({
           email,
           password,
           options: { emailRedirectTo: window.location.origin },
@@ -234,11 +247,14 @@ export function AuthForm() {
 
         if (signUpError) throw signUpError;
 
-        if (data.session) {
-          router.replace('/');
-        } else {
-          setMessage('Revisa tu correo para confirmar la cuenta antes de iniciar sesión.');
-        }
+        // Desconectamos cualquier sesión automática inmediata para dar el flujo de login manual solicitado
+        await supabase.auth.signOut({ scope: 'local' });
+        setRegisteredEmail(email);
+        setMode('sign-in');
+        setShowPassword(false);
+        setShowConfirmation(false);
+        setMessage('¡Cuenta creada con éxito! Ahora inicia sesión con tu correo y contraseña.');
+        setSubmitting(false);
         return;
       }
 
@@ -412,11 +428,20 @@ export function AuthForm() {
                   <input
                     id="auth-password"
                     name="password"
-                    type="password"
+                    type={showPassword ? 'text' : 'password'}
                     placeholder="Mínimo 6 caracteres"
                     autoComplete="new-password"
                     required
                   />
+                  <button
+                    type="button"
+                    className="auth-password-toggle"
+                    onClick={() => setShowPassword(!showPassword)}
+                    aria-label={showPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
+                    title={showPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
+                  >
+                    {showPassword ? <EyeSlash size={18} weight="bold" /> : <Eye size={18} weight="bold" />}
+                  </button>
                 </div>
               </div>
 
@@ -429,11 +454,20 @@ export function AuthForm() {
                   <input
                     id="auth-confirmation"
                     name="confirmation"
-                    type="password"
+                    type={showConfirmation ? 'text' : 'password'}
                     placeholder="Repite la contraseña"
                     autoComplete="new-password"
                     required
                   />
+                  <button
+                    type="button"
+                    className="auth-password-toggle"
+                    onClick={() => setShowConfirmation(!showConfirmation)}
+                    aria-label={showConfirmation ? 'Ocultar contraseña' : 'Ver contraseña'}
+                    title={showConfirmation ? 'Ocultar contraseña' : 'Ver contraseña'}
+                  >
+                    {showConfirmation ? <EyeSlash size={18} weight="bold" /> : <Eye size={18} weight="bold" />}
+                  </button>
                 </div>
               </div>
             </>
@@ -451,7 +485,8 @@ export function AuthForm() {
                     type="email"
                     placeholder="tu@correo.com"
                     autoComplete="email"
-                    defaultValue={recoveryEmail}
+                    defaultValue={registeredEmail || recoveryEmail}
+                    key={registeredEmail}
                     required
                   />
                 </div>
@@ -467,11 +502,20 @@ export function AuthForm() {
                     <input
                       id="auth-password"
                       name="password"
-                      type="password"
+                      type={showPassword ? 'text' : 'password'}
                       placeholder="Tu contraseña secreta"
                       autoComplete={mode === 'sign-in' ? 'current-password' : 'new-password'}
                       required
                     />
+                    <button
+                      type="button"
+                      className="auth-password-toggle"
+                      onClick={() => setShowPassword(!showPassword)}
+                      aria-label={showPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
+                      title={showPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
+                    >
+                      {showPassword ? <EyeSlash size={18} weight="bold" /> : <Eye size={18} weight="bold" />}
+                    </button>
                   </div>
                 </div>
               ) : null}
@@ -486,11 +530,20 @@ export function AuthForm() {
                     <input
                       id="auth-confirmation"
                       name="confirmation"
-                      type="password"
+                      type={showConfirmation ? 'text' : 'password'}
                       placeholder="Repite la contraseña"
                       autoComplete="new-password"
                       required
                     />
+                    <button
+                      type="button"
+                      className="auth-password-toggle"
+                      onClick={() => setShowConfirmation(!showConfirmation)}
+                      aria-label={showConfirmation ? 'Ocultar contraseña' : 'Ver contraseña'}
+                      title={showConfirmation ? 'Ocultar contraseña' : 'Ver contraseña'}
+                    >
+                      {showConfirmation ? <EyeSlash size={18} weight="bold" /> : <Eye size={18} weight="bold" />}
+                    </button>
                   </div>
                 </div>
               ) : null}
