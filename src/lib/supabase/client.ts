@@ -1,6 +1,7 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '@/types/database';
 
-let client: SupabaseClient | undefined;
+let client: SupabaseClient<Database> | undefined;
 
 function getConfig() {
   return {
@@ -14,7 +15,7 @@ export function isSupabaseConfigured() {
   return Boolean(url && key);
 }
 
-export function getSupabaseClient() {
+export function getSupabaseClient(): SupabaseClient<Database> {
   if (client) return client;
 
   const { url, key } = getConfig();
@@ -22,7 +23,7 @@ export function getSupabaseClient() {
     throw new Error('Falta la configuración pública de Supabase.');
   }
 
-  client = createClient(url, key, {
+  client = createClient<Database>(url, key, {
     auth: {
       autoRefreshToken: true,
       persistSession: true,
