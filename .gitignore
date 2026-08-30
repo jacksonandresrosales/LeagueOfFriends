@@ -13,3 +13,4 @@ Thumbs.db
 .codex/
 .claude/
 .playwright/
+.playwright-cli/
