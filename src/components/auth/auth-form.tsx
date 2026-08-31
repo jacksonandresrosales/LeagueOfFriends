@@ -395,7 +395,6 @@ export function AuthForm() {
           </span>
         </Link>
         <div className="auth-brand-copy">
-          <span className="section-index">00</span>
           <p className="eyebrow">Acceso Competitivo</p>
           <h1>Tu Círculo. Tu Nivel.</h1>
           <p>
@@ -420,9 +419,6 @@ export function AuthForm() {
           </Link>
 
           <header className="auth-header">
-            <span className="section-index">
-              {mode === 'sign-in' ? '01' : mode === 'sign-up' ? '02' : '03'}
-            </span>
             <p className="eyebrow">
               {mode === 'sign-in'
                 ? 'Iniciar sesión'
