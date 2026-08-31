@@ -29,7 +29,6 @@ export function AuthForm() {
   const [mode, setMode] = useState<Mode>('sign-in');
   const [resetStep, setResetStep] = useState<ResetStep>('email');
   const [inputEmail, setInputEmail] = useState('');
-  const [registeredEmail, setRegisteredEmail] = useState('');
   const [recoveryEmail, setRecoveryEmail] = useState('');
   const [emailCheckStatus, setEmailCheckStatus] = useState<EmailStatus>('idle');
   const [showPassword, setShowPassword] = useState(false);
@@ -69,8 +68,12 @@ export function AuthForm() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email: clean }),
         });
+        if (!res.ok) {
+          setEmailCheckStatus('idle');
+          return;
+        }
         const data = await res.json();
-        if (data.exists) {
+        if (data.exists === true) {
           setEmailCheckStatus('registered');
         } else {
           setEmailCheckStatus('available');
@@ -78,10 +81,36 @@ export function AuthForm() {
       } catch {
         setEmailCheckStatus('idle');
       }
-    }, 380);
+    }, 280);
 
     return () => clearTimeout(timer);
   }, [inputEmail, mode]);
+
+  async function handleEmailBlur() {
+    if (mode !== 'sign-up') return;
+    const clean = inputEmail.trim().toLowerCase();
+    if (!clean || !clean.includes('@') || clean.length < 5 || !clean.includes('.')) return;
+    setEmailCheckStatus('checking');
+    try {
+      const res = await fetch('/api/auth/check-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: clean }),
+      });
+      if (!res.ok) {
+        setEmailCheckStatus('idle');
+        return;
+      }
+      const data = await res.json();
+      if (data.exists === true) {
+        setEmailCheckStatus('registered');
+      } else {
+        setEmailCheckStatus('available');
+      }
+    } catch {
+      setEmailCheckStatus('idle');
+    }
+  }
 
   function changeMode(nextMode: Mode) {
     setMode(nextMode);
@@ -329,7 +358,6 @@ export function AuthForm() {
 
         // Desconectamos cualquier sesión automática inmediata para forzar inicio de sesión manual
         await supabase.auth.signOut({ scope: 'local' });
-        setRegisteredEmail(email);
         setInputEmail(email);
         setMode('sign-in');
         setShowPassword(false);
@@ -575,13 +603,12 @@ export function AuthForm() {
                         type="email"
                         placeholder="tu@correo.com"
                         autoComplete="email"
-                        value={inputEmail || registeredEmail || recoveryEmail}
+                        value={inputEmail}
                         onChange={(e) => {
                           setInputEmail(e.target.value);
-                          setRegisteredEmail('');
-                          setRecoveryEmail('');
                           setError('');
                         }}
+                        onBlur={handleEmailBlur}
                         required
                       />
                       {mode === 'sign-up' && (
@@ -611,7 +638,6 @@ export function AuthForm() {
                         <button
                           type="button"
                           onClick={() => {
-                            setRegisteredEmail(inputEmail);
                             changeMode('sign-in');
                           }}
                         >
