@@ -4,7 +4,7 @@ import { ArrowRight, Check, GameController, ShieldCheck, Warning } from '@phosph
 import { FormEvent, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AppSidebar } from '@/components/shared/app-sidebar';
-import { ThemeToggle } from '@/components/shared/theme-toggle';
+import { AppTopbar } from '@/components/shared/app-topbar';
 import { PLATFORMS, type PlatformRoute } from '@/lib/riot/types';
 import { getSupabaseClient } from '@/lib/supabase/client';
 
@@ -75,15 +75,7 @@ export function LinkRiotAccount() {
     <div className="app-shell">
       <AppSidebar active="Ajustes" />
       <main className="dashboard-main challenge-create-main">
-        <header className="topbar">
-          <div>
-            <p className="eyebrow">Cuenta / Riot Games</p>
-            <h1>Vincular Riot ID</h1>
-          </div>
-          <div className="topbar-actions">
-            <ThemeToggle />
-          </div>
-        </header>
+        <AppTopbar category="Cuenta / Riot Games" title="Vincular Riot ID" />
 
         <div className="challenge-intro">
           <div>

@@ -16,8 +16,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { AppFooter } from '@/components/shared/app-footer';
 import { AppSidebar } from '@/components/shared/app-sidebar';
-import { NotificationBell } from '@/components/shared/notification-bell';
-import { ThemeToggle } from '@/components/shared/theme-toggle';
+import { AppTopbar } from '@/components/shared/app-topbar';
 import { formatTierName, getRankInitials } from '@/lib/riot/format';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import type { Database } from '@/types/database';
@@ -307,27 +306,16 @@ export function Dashboard() {
     <div className="app-shell" id="inicio">
       <AppSidebar active="Resumen" />
       <main className="dashboard-main">
-        <header className="topbar">
-          <div><p className="eyebrow">Panel personal / Temporada 2026</p><h1>Tu rendimiento</h1></div>
-          <div className="topbar-actions">
-            <NotificationBell />
-            <ThemeToggle />
-            <div className="mini-profile" aria-label={`Perfil de ${displayName}`}>
-              {riotSummary?.profileIconUrl ? (
-                <img
-                  src={riotSummary.profileIconUrl}
-                  alt={displayName}
-                  width={38}
-                  height={38}
-                  style={{ border: '2px solid var(--line)', background: 'var(--surface)' }}
-                />
-              ) : (
-                <span className="avatar avatar-small">{initials}</span>
-              )}
-              <span><strong>{displayName}</strong><small>{tagLine}</small></span>
-            </div>
-          </div>
-        </header>
+        <AppTopbar
+          category="Panel personal / Temporada 2026"
+          title="Tu rendimiento"
+          user={{
+            displayName,
+            tagLine,
+            avatarUrl: riotSummary?.profileIconUrl,
+            initials,
+          }}
+        />
 
         {!loading && !riotAccount ? (
           <section className="panel" style={{ padding: '24px', margin: '24px 0', border: '3px solid var(--line)', background: 'var(--surface-alt)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '20px', flexWrap: 'wrap' }}>

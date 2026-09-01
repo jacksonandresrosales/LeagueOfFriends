@@ -162,8 +162,12 @@ button:focus-visible, a:focus-visible { outline: 3px solid var(--accent-bright);
   margin: 0 0 5px; color: var(--muted); font: 700 10px/1.2 var(--font-mono), monospace;
   text-transform: uppercase; letter-spacing: .12em;
 }
-.topbar h1 { margin: 0; font: 900 clamp(31px, 4vw, 47px)/.9 var(--font-display), sans-serif; text-transform: uppercase; letter-spacing: .01em; }
-.topbar-actions { display: flex; align-items: center; gap: 10px; }
+.topbar h1 { margin: 0; font: 900 clamp(24px, 4vw, 47px)/.9 var(--font-display), sans-serif; text-transform: uppercase; letter-spacing: .01em; }
+.topbar-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.topbar-create-btn { display: none; background: var(--accent); color: var(--on-accent); }
+.topbar-create-btn:hover { background: var(--accent-bright); }
+.topbar-signout-btn:hover { background: var(--accent-bright); color: #fff; }
+.topbar-gear-btn:hover { background: var(--surface-alt); border-color: var(--accent); }
 .icon-button {
   position: relative; width: 43px; height: 43px; border: 2px solid var(--line); background: var(--surface);
   display: grid; place-items: center; cursor: pointer; box-shadow: 3px 3px 0 var(--line);
@@ -539,14 +543,16 @@ button:focus-visible, a:focus-visible { outline: 3px solid var(--accent-bright);
   .auth-brand-copy h1 { max-width: 13ch; font-size: clamp(47px, 13vw, 74px); }
   .auth-security-note { display: none; }
   .auth-form-panel { min-height: auto; padding: 42px 22px 58px; place-items: start center; }
-  .app-shell { display: block; padding-bottom: max(80px, calc(72px + env(safe-area-inset-bottom))); }
-  .sidebar { position: fixed; inset: auto 0 0; width: 100%; height: auto; min-height: 60px; padding: 6px 10px max(6px, env(safe-area-inset-bottom)); border: 0; border-top: 3px solid var(--line); flex-direction: row; z-index: 90; background: var(--surface); }
+  .app-shell { display: block; padding-bottom: max(84px, calc(74px + env(safe-area-inset-bottom))); }
+  .sidebar { position: fixed; inset: auto 0 0; width: 100%; height: auto; min-height: 60px; padding: 6px 6px max(8px, env(safe-area-inset-bottom)); border: 0; border-top: 3px solid var(--line); flex-direction: row; z-index: 90; background: var(--surface); box-shadow: 0 -4px 14px rgba(0, 0, 0, 0.25); }
   .brand, .create-button, .sidebar-footer { display: none; }
-  .main-nav { margin: 0; width: 100%; display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
-  .nav-link { min-height: 48px; border: 2px solid transparent; }
-  .nav-link.is-active { border-color: var(--line); }
+  .main-nav { margin: 0; width: 100%; display: grid; grid-template-columns: repeat(6, 1fr); gap: 2px; }
+  .nav-link { min-height: 48px; border: 2px solid transparent; padding: 4px 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; }
+  .nav-link span { display: block; font: 750 9px/1 var(--font-mono), monospace; text-transform: uppercase; letter-spacing: 0.02em; }
+  .nav-link.is-active { border-color: var(--line); background: var(--surface-alt); }
   .dashboard-main { padding: 0 16px 35px; }
-  .topbar { min-height: 76px; }
+  .topbar { min-height: 72px; padding: 10px 0; }
+  .topbar-create-btn { display: grid; }
   .topbar .eyebrow, .mini-profile { display: none; }
   .profile-banner { min-height: auto; padding: 20px 16px; margin-bottom: 24px; }
   .profile-banner-content { flex-direction: column; align-items: flex-start; gap: 16px; }
@@ -573,7 +579,10 @@ button:focus-visible, a:focus-visible { outline: 3px solid var(--accent-bright);
 
 @media (max-width: 520px) {
   .dashboard-main { padding-inline: 12px; }
-  .topbar h1 { font-size: 26px; }
+  .topbar h1 { font-size: 22px; line-height: 1.1; }
+  .topbar-actions { gap: 6px; }
+  .icon-button { width: 38px; height: 38px; }
+  .main-nav .nav-link span { font-size: 8px; letter-spacing: 0; }
   .profile-hero { grid-template-columns: 1fr; }
   .rank-emblem { width: 60px; height: 60px; }
   .season-goal { grid-column: auto; }

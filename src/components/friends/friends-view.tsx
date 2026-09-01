@@ -17,8 +17,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { AppFooter } from '@/components/shared/app-footer';
 import { AppSidebar } from '@/components/shared/app-sidebar';
-import { NotificationBell } from '@/components/shared/notification-bell';
-import { ThemeToggle } from '@/components/shared/theme-toggle';
+import { AppTopbar } from '@/components/shared/app-topbar';
 import { getSupabaseClient } from '@/lib/supabase/client';
 
 interface FriendshipItem {
@@ -245,16 +244,7 @@ export function FriendsView() {
     <div className="app-shell" id="amigos">
       <AppSidebar active="Amigos" />
       <main className="dashboard-main challenge-create-main">
-        <header className="topbar">
-          <div>
-            <p className="eyebrow">Círculo / Comunidad</p>
-            <h1>Amigos</h1>
-          </div>
-          <div className="topbar-actions">
-            <NotificationBell />
-            <ThemeToggle />
-          </div>
-        </header>
+        <AppTopbar category="Círculo / Comunidad" title="Amigos" />
 
         <div className="challenge-intro">
           <div>

@@ -18,8 +18,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { AppFooter } from '@/components/shared/app-footer';
 import { AppSidebar } from '@/components/shared/app-sidebar';
-import { NotificationBell } from '@/components/shared/notification-bell';
-import { ThemeToggle } from '@/components/shared/theme-toggle';
+import { AppTopbar } from '@/components/shared/app-topbar';
 import { formatTierName } from '@/lib/riot/format';
 import { getSupabaseClient } from '@/lib/supabase/client';
 
@@ -389,16 +388,7 @@ export function LeaderboardView() {
     <div className="app-shell" id="clasificacion">
       <AppSidebar active="Clasificación" />
       <main className="dashboard-main challenge-create-main">
-        <header className="topbar">
-          <div>
-            <p className="eyebrow">Temporada 2026 / Ranking de Invocadores</p>
-            <h1>Tabla de Clasificación</h1>
-          </div>
-          <div className="topbar-actions">
-            <NotificationBell />
-            <ThemeToggle />
-          </div>
-        </header>
+        <AppTopbar category="Temporada 2026 / Ranking de Invocadores" title="Tabla de Clasificación" />
 
         {/* Intro */}
         <div className="challenge-intro">

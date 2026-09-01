@@ -18,8 +18,7 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { AppFooter } from '@/components/shared/app-footer';
 import { AppSidebar } from '@/components/shared/app-sidebar';
-import { NotificationBell } from '@/components/shared/notification-bell';
-import { ThemeToggle } from '@/components/shared/theme-toggle';
+import { AppTopbar } from '@/components/shared/app-topbar';
 import { getSupabaseClient } from '@/lib/supabase/client';
 
 type TabType = 'active' | 'pending' | 'history';
@@ -263,16 +262,7 @@ export function ChallengesListView() {
     <div className="app-shell" id="retos">
       <AppSidebar active="Retos" />
       <main className="dashboard-main challenge-create-main">
-        <header className="topbar">
-          <div>
-            <p className="eyebrow">Duelos y Carreras / Temporada 2026</p>
-            <h1>Retos Competitivos</h1>
-          </div>
-          <div className="topbar-actions">
-            <NotificationBell />
-            <ThemeToggle />
-          </div>
-        </header>
+        <AppTopbar category="Duelos y Carreras / Temporada 2026" title="Retos Competitivos" />
 
         <div className="challenge-intro">
           <div>

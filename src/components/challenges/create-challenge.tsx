@@ -19,8 +19,7 @@ import { FormEvent, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AppFooter } from '@/components/shared/app-footer';
 import { AppSidebar } from '@/components/shared/app-sidebar';
-import { NotificationBell } from '@/components/shared/notification-bell';
-import { ThemeToggle } from '@/components/shared/theme-toggle';
+import { AppTopbar } from '@/components/shared/app-topbar';
 import { getSupabaseClient } from '@/lib/supabase/client';
 
 type ChallengeType = 'lp' | 'rank' | 'wins';
@@ -314,13 +313,7 @@ export function CreateChallenge() {
     <div className="app-shell">
       <AppSidebar active="Retos" />
       <main className="dashboard-main challenge-create-main">
-        <header className="topbar">
-          <div><p className="eyebrow">Retos / Nuevo</p><h1>Crear un reto</h1></div>
-          <div className="topbar-actions">
-            <NotificationBell />
-            <ThemeToggle />
-          </div>
-        </header>
+        <AppTopbar category="Retos / Nuevo" title="Crear un reto" />
 
         <div className="challenge-intro">
           <div>
