@@ -147,22 +147,7 @@ export function NotificationBell() {
       </button>
 
       {isOpen ? (
-        <div
-          className="panel"
-          style={{
-            position: 'absolute',
-            top: 'calc(100% + 10px)',
-            right: 0,
-            width: 'min(90vw, 380px)',
-            maxHeight: '80vh',
-            overflowY: 'auto',
-            padding: 0,
-            zIndex: 999,
-            boxShadow: '6px 6px 0 var(--line)',
-            display: 'flex',
-            flexDirection: 'column',
-          }}
-        >
+        <div className="panel notification-popover">
           {/* Cabecera del Panel */}
           <div
             style={{
