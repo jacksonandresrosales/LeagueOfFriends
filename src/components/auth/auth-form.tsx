@@ -17,7 +17,7 @@ import {
 } from '@phosphor-icons/react';
 import { FormEvent, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
 
 type Mode = 'sign-in' | 'sign-up' | 'reset';
@@ -26,6 +26,8 @@ type EmailStatus = 'idle' | 'checking' | 'available' | 'registered';
 
 export function AuthForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isConfirmed = searchParams.get('confirmed') === 'true';
   const [mode, setMode] = useState<Mode>('sign-in');
   const [resetStep, setResetStep] = useState<ResetStep>('email');
   const [inputEmail, setInputEmail] = useState('');
@@ -37,7 +39,9 @@ export function AuthForm() {
   const otpInputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   const [resendCooldown, setResendCooldown] = useState(0);
-  const [message, setMessage] = useState('');
+  const [message, setMessage] = useState(
+    isConfirmed ? '¡Correo confirmado con éxito! Ya puedes iniciar sesión con tus credenciales.' : '',
+  );
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -340,7 +344,7 @@ export function AuthForm() {
         const { error: signUpError } = await supabase.auth.signUp({
           email,
           password,
-          options: { emailRedirectTo: window.location.origin },
+          options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
         });
 
         if (signUpError) {
