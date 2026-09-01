@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
     const { error: resendError } = await resend.emails.send({
       from: 'LeagueOfFriends <onboarding@resend.dev>',
       to: email,
-      subject: `Código de verificación: ${otpCode} — LeagueOfFriends`,
+      subject: `🔐 ${otpCode} es tu código de verificación — LeagueOfFriends`,
       html: getPasswordResetEmailHtml(otpCode),
     });
 
