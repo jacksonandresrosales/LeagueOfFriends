@@ -12,6 +12,7 @@ import {
   LockKey,
   ShieldCheck,
   SpinnerGap,
+  User,
   UserPlus,
   WarningCircle,
 } from '@phosphor-icons/react';
@@ -299,6 +300,28 @@ export function AuthForm() {
 
       // 2. REGISTRO
       if (mode === 'sign-up') {
+        const rawDisplayName = String(formData.get('displayName') ?? '').trim();
+
+        if (!rawDisplayName) {
+          setError('Ingresa un nombre de invocador o usuario.');
+          setSubmitting(false);
+          return;
+        }
+
+        if (rawDisplayName.length < 3) {
+          setError('El nombre de invocador debe tener al menos 3 caracteres.');
+          setSubmitting(false);
+          return;
+        }
+
+        if (rawDisplayName.length > 16) {
+          setError('El nombre de invocador no puede tener más de 16 caracteres.');
+          setSubmitting(false);
+          return;
+        }
+
+        const safeDisplayName = rawDisplayName.slice(0, 16);
+
         if (!email || !email.includes('@')) {
           setError('Ingresa un correo electrónico válido.');
           setSubmitting(false);
@@ -344,7 +367,12 @@ export function AuthForm() {
         const { error: signUpError } = await supabase.auth.signUp({
           email,
           password,
-          options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+          options: {
+            data: {
+              displayName: safeDisplayName,
+            },
+            emailRedirectTo: `${window.location.origin}/auth/callback`,
+          },
         });
 
         if (signUpError) {
@@ -591,6 +619,31 @@ export function AuthForm() {
                 </>
               ) : (
                 <>
+                  {mode === 'sign-up' ? (
+                    <div className="field-group">
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                        <label className="eyebrow" htmlFor="auth-username">
+                          Nombre de Invocador / Usuario
+                        </label>
+                        <small style={{ font: '700 9px var(--font-mono)', color: 'var(--muted)', textTransform: 'uppercase' }}>
+                          Máx. 16 caracteres
+                        </small>
+                      </div>
+                      <div className="auth-input">
+                        <User size={18} weight="bold" />
+                        <input
+                          id="auth-username"
+                          name="displayName"
+                          type="text"
+                          placeholder="Ej. Faker o Jackson"
+                          autoComplete="nickname"
+                          maxLength={16}
+                          required
+                        />
+                      </div>
+                    </div>
+                  ) : null}
+
                   <div className="field-group">
                     <label className="eyebrow" htmlFor="auth-email">
                       Correo electrónico
