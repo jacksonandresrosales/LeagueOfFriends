@@ -31,7 +31,16 @@ export function AuthForm() {
   const isConfirmed = searchParams.get('confirmed') === 'true';
   const [mode, setMode] = useState<Mode>('sign-in');
   const [resetStep, setResetStep] = useState<ResetStep>('email');
-  const [inputEmail, setInputEmail] = useState('');
+  const [inputEmail, setInputEmail] = useState(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        return localStorage.getItem('lof_remembered_email') || '';
+      } catch {
+        return '';
+      }
+    }
+    return '';
+  });
   const [recoveryEmail, setRecoveryEmail] = useState('');
   const [emailCheckStatus, setEmailCheckStatus] = useState<EmailStatus>('idle');
   const [showPassword, setShowPassword] = useState(false);
@@ -40,6 +49,7 @@ export function AuthForm() {
   const otpInputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   const [resendCooldown, setResendCooldown] = useState(0);
+  const [rememberMe, setRememberMe] = useState(true);
   const [message, setMessage] = useState(
     isConfirmed ? '¡Correo confirmado con éxito! Ya puedes iniciar sesión con tus credenciales.' : '',
   );
@@ -407,6 +417,16 @@ export function AuthForm() {
         return;
       }
 
+      try {
+        if (rememberMe) {
+          localStorage.setItem('lof_remembered_email', email);
+        } else {
+          localStorage.removeItem('lof_remembered_email');
+        }
+      } catch {
+        // Fallback silencioso
+      }
+
       router.replace('/');
     } catch {
       setError('No fue posible completar la solicitud. Inténtalo de nuevo en unos minutos.');
@@ -763,6 +783,36 @@ export function AuthForm() {
                   ) : null}
                 </>
               )}
+
+              {mode === 'sign-in' ? (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '6px 0 18px', gap: '8px', flexWrap: 'wrap' }}>
+                  <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', cursor: 'pointer', userSelect: 'none' }}>
+                    <input
+                      type="checkbox"
+                      checked={rememberMe}
+                      onChange={(e) => setRememberMe(e.target.checked)}
+                      style={{
+                        width: '18px',
+                        height: '18px',
+                        accentColor: 'var(--accent)',
+                        cursor: 'pointer',
+                      }}
+                    />
+                    <span style={{ font: '800 11px/1 var(--font-mono)', textTransform: 'uppercase', color: 'var(--ink)' }}>
+                      Recordar mi cuenta
+                    </span>
+                  </label>
+
+                  <button
+                    type="button"
+                    className="auth-inline-link"
+                    style={{ margin: 0, fontSize: '11px', textTransform: 'none' }}
+                    onClick={() => changeMode('reset')}
+                  >
+                    ¿Olvidaste tu contraseña?
+                  </button>
+                </div>
+              ) : null}
 
               <button className="auth-submit" type="submit" disabled={submitting}>
                 <span>
