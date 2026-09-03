@@ -660,15 +660,50 @@ export function CompareView() {
             <div className="chart-y-axis" aria-hidden="true">
               <span>+160</span><span>+120</span><span>+80</span><span>+40</span><span>0</span>
             </div>
-            <svg viewBox="0 0 570 210" role="img" aria-labelledby="chart-title chart-description" preserveAspectRatio="none">
-              <title id="chart-title">Comparativa de puntos de liga</title>
-              <desc id="chart-description">Evolución de {p1.displayName} vs {p2.displayName}.</desc>
-              {[20, 62, 104, 146, 188].map((y) => <line key={y} x1="0" y1={y} x2="570" y2={y} className="grid-line" />)}
-              <path d={rivalPath} className="chart-line rival-line" />
-              <path d={playerPath} className="chart-line player-line" />
-              <circle cx="570" cy={p2Y} r="5" fill="var(--muted)" stroke="var(--line)" strokeWidth="2" />
-              <circle cx="570" cy={p1Y} r="6" className="chart-point" />
-            </svg>
+            <div style={{ position: 'relative', width: '100%', height: '225px' }}>
+              <svg viewBox="0 0 570 210" role="img" aria-labelledby="chart-title chart-description" preserveAspectRatio="none" style={{ width: '100%', height: '100%', display: 'block' }}>
+                <title id="chart-title">Comparativa de puntos de liga</title>
+                <desc id="chart-description">Evolución de {p1.displayName} vs {p2.displayName}.</desc>
+                {[20, 62, 104, 146, 188].map((y) => <line key={y} x1="0" y1={y} x2="570" y2={y} className="grid-line" />)}
+                <path d={rivalPath} className="chart-line rival-line" />
+                <path d={playerPath} className="chart-line player-line" />
+              </svg>
+              {/* Punto circular perfecto para Rival */}
+              <div
+                style={{
+                  position: 'absolute',
+                  right: 0,
+                  top: `${(p2Y / 210) * 100}%`,
+                  transform: 'translate(50%, -50%)',
+                  width: '12px',
+                  height: '12px',
+                  borderRadius: '50%',
+                  background: 'var(--muted)',
+                  border: '2px solid var(--line)',
+                  pointerEvents: 'none',
+                  zIndex: 2,
+                }}
+                aria-hidden="true"
+              />
+              {/* Punto circular perfecto para Jugador */}
+              <div
+                style={{
+                  position: 'absolute',
+                  right: 0,
+                  top: `${(p1Y / 210) * 100}%`,
+                  transform: 'translate(50%, -50%)',
+                  width: '14px',
+                  height: '14px',
+                  borderRadius: '50%',
+                  background: 'var(--accent-bright)',
+                  border: '3px solid var(--line)',
+                  boxShadow: '0 0 0 1px var(--surface)',
+                  pointerEvents: 'none',
+                  zIndex: 3,
+                }}
+                aria-hidden="true"
+              />
+            </div>
             <div className="chart-x-axis" aria-hidden="true">
               {chart.dates.map((d) => (
                 <span key={d}>{d}</span>

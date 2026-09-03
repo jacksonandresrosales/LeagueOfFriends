@@ -92,20 +92,40 @@ function PerformanceChart({ period, lp = 0 }: { period: Period; lp?: number }) {
         <span>+40</span>
         <span>0</span>
       </div>
-      <svg
-        viewBox="0 0 570 210"
-        role="img"
-        aria-labelledby="chart-title chart-description"
-        preserveAspectRatio="none"
-      >
-        <title id="chart-title">Evolución de puntos de liga</title>
-        <desc id="chart-description">Gráfico de líneas que muestra la ganancia de LP para el invocador.</desc>
-        {[20, 62, 104, 146, 188].map((y) => (
-          <line key={y} x1="0" y1={y} x2="570" y2={y} className="grid-line" />
-        ))}
-        <path d={path} className="chart-line player-line" />
-        <circle cx="570" cy={playerY} r="6" className="chart-point" />
-      </svg>
+      <div style={{ position: 'relative', width: '100%', height: '225px' }}>
+        <svg
+          viewBox="0 0 570 210"
+          role="img"
+          aria-labelledby="chart-title chart-description"
+          preserveAspectRatio="none"
+          style={{ width: '100%', height: '100%', display: 'block' }}
+        >
+          <title id="chart-title">Evolución de puntos de liga</title>
+          <desc id="chart-description">Gráfico de líneas que muestra la ganancia de LP para el invocador.</desc>
+          {[20, 62, 104, 146, 188].map((y) => (
+            <line key={y} x1="0" y1={y} x2="570" y2={y} className="grid-line" />
+          ))}
+          <path d={path} className="chart-line player-line" />
+        </svg>
+        {/* Punto circular perfecto */}
+        <div
+          style={{
+            position: 'absolute',
+            right: 0,
+            top: `${(playerY / 210) * 100}%`,
+            transform: 'translate(50%, -50%)',
+            width: '14px',
+            height: '14px',
+            borderRadius: '50%',
+            background: 'var(--accent-bright)',
+            border: '3px solid var(--line)',
+            boxShadow: '0 0 0 1px var(--surface)',
+            pointerEvents: 'none',
+            zIndex: 3,
+          }}
+          aria-hidden="true"
+        />
+      </div>
       <div className="chart-x-axis" aria-hidden="true">
         {data.dates.map((item) => (
           <span key={item}>{item}</span>
