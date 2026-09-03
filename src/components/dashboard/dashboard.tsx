@@ -78,8 +78,10 @@ const periodChartData: Record<Period, { points: number; path: string; dates: str
   },
 };
 
-function PerformanceChart({ period }: { period: Period }) {
+function PerformanceChart({ period, lp = 0 }: { period: Period; lp?: number }) {
   const data = periodChartData[period];
+  const playerY = 188 - (Math.min(160, Math.max(0, lp)) / 160) * 168;
+  const path = `M0 188 C140 188, 285 ${(188 + playerY) / 2}, 570 ${playerY}`;
 
   return (
     <figure className="chart" aria-label={`Evolución de LP durante el periodo: ${period}`}>
@@ -101,8 +103,8 @@ function PerformanceChart({ period }: { period: Period }) {
         {[20, 62, 104, 146, 188].map((y) => (
           <line key={y} x1="0" y1={y} x2="570" y2={y} className="grid-line" />
         ))}
-        <path d={data.path} className="chart-line player-line" />
-        <circle cx="570" cy={188} r="6" className="chart-point" />
+        <path d={path} className="chart-line player-line" />
+        <circle cx="570" cy={playerY} r="6" className="chart-point" />
       </svg>
       <div className="chart-x-axis" aria-hidden="true">
         {data.dates.map((item) => (
@@ -436,7 +438,7 @@ export function Dashboard() {
             <div className="chart-legend">
               <span><i className="legend-player" /> Tú <strong>{lp} LP</strong></span>
             </div>
-            <PerformanceChart period={period} />
+            <PerformanceChart period={period} lp={lp} />
           </section>
 
           <section className="panel leaderboard-panel" aria-labelledby="leaderboard-title">

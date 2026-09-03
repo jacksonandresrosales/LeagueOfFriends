@@ -312,6 +312,12 @@ export function CompareView() {
   const p2 = rivalStats;
   const chart = periodChartData[period];
 
+  const p1Y = 188 - (Math.min(160, Math.max(0, p1.lp)) / 160) * 168;
+  const p2Y = 188 - (Math.min(160, Math.max(0, p2.lp)) / 160) * 168;
+
+  const playerPath = `M0 188 C140 188, 285 ${(188 + p1Y) / 2}, 570 ${p1Y}`;
+  const rivalPath = `M0 188 C140 188, 285 ${(188 + p2Y) / 2}, 570 ${p2Y}`;
+
   return (
     <div className="app-shell" id="comparar">
       <AppSidebar active="Comparar" />
@@ -658,9 +664,10 @@ export function CompareView() {
               <title id="chart-title">Comparativa de puntos de liga</title>
               <desc id="chart-description">Evolución de {p1.displayName} vs {p2.displayName}.</desc>
               {[20, 62, 104, 146, 188].map((y) => <line key={y} x1="0" y1={y} x2="570" y2={y} className="grid-line" />)}
-              <path d={chart.rivalPath} className="chart-line rival-line" />
-              <path d={chart.playerPath} className="chart-line player-line" />
-              <circle cx="570" cy={period === 'Día' ? 24 : 25} r="6" className="chart-point" />
+              <path d={rivalPath} className="chart-line rival-line" />
+              <path d={playerPath} className="chart-line player-line" />
+              <circle cx="570" cy={p2Y} r="5" fill="var(--muted)" stroke="var(--line)" strokeWidth="2" />
+              <circle cx="570" cy={p1Y} r="6" className="chart-point" />
             </svg>
             <div className="chart-x-axis" aria-hidden="true">
               {chart.dates.map((d) => (
