@@ -18,7 +18,7 @@ import {
 } from '@phosphor-icons/react';
 import { FormEvent, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
 
 type Mode = 'sign-in' | 'sign-up' | 'reset';
@@ -27,8 +27,6 @@ type EmailStatus = 'idle' | 'checking' | 'available' | 'registered';
 
 export function AuthForm() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const isConfirmed = searchParams.get('confirmed') === 'true';
   const [mode, setMode] = useState<Mode>('sign-in');
   const [resetStep, setResetStep] = useState<ResetStep>('email');
   const [inputEmail, setInputEmail] = useState(() => {
@@ -50,9 +48,8 @@ export function AuthForm() {
 
   const [resendCooldown, setResendCooldown] = useState(0);
   const [rememberMe, setRememberMe] = useState(true);
-  const [message, setMessage] = useState(
-    isConfirmed ? '¡Correo confirmado con éxito! Ya puedes iniciar sesión con tus credenciales.' : '',
-  );
+  const [registrationSuccess, setRegistrationSuccess] = useState(false);
+  const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -383,7 +380,7 @@ export function AuthForm() {
           setShowPassword(false);
           setShowConfirmation(false);
           setEmailCheckStatus('idle');
-          setMessage('¡Cuenta creada con éxito! Ahora inicia sesión con tu correo y contraseña.');
+          setMessage('¡Cuenta creada con éxito! Inicia sesión con tus credenciales.');
           setSubmitting(false);
           return;
         }
@@ -396,7 +393,14 @@ export function AuthForm() {
           // Fallback silencioso
         }
 
-        router.replace('/');
+        // Activar pantalla de bienvenida y redirigir
+        setRegistrationSuccess(true);
+        setError('');
+        setMessage('');
+
+        setTimeout(() => {
+          router.replace('/');
+        }, 1800);
         return;
       }
 
@@ -509,7 +513,65 @@ export function AuthForm() {
             </div>
           ) : null}
 
-          {mode === 'reset' && resetStep === 'success' ? (
+          {registrationSuccess ? (
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                textAlign: 'center',
+                padding: '28px 12px 16px',
+                animation: 'fadeIn 0.3s ease-out',
+              }}
+            >
+              <div
+                style={{
+                  width: '76px',
+                  height: '76px',
+                  borderRadius: '50%',
+                  background: 'var(--accent)',
+                  color: '#ffffff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  border: '3px solid var(--line)',
+                  boxShadow: '4px 4px 0px var(--line)',
+                  marginBottom: '20px',
+                }}
+              >
+                <CheckCircle size={44} weight="fill" />
+              </div>
+
+              <span className="eyebrow" style={{ color: 'var(--accent)', marginBottom: '8px' }}>
+                ¡Registro Completado!
+              </span>
+
+              <h2 style={{ font: '900 24px/1.15 var(--font-display)', textTransform: 'uppercase', margin: '0 0 12px' }}>
+                ¡Bienvenido a LeagueOfFriends!
+              </h2>
+
+              <p style={{ font: '600 13px/1.5 var(--font-mono)', color: 'var(--muted)', maxWidth: '320px', margin: '0 0 24px' }}>
+                Tu cuenta ha sido creada exitosamente. Preparando tu perfil y entrando a la arena...
+              </p>
+
+              <div
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  padding: '10px 18px',
+                  background: 'var(--surface-alt)',
+                  border: '2px solid var(--line)',
+                  font: '800 11px/1 var(--font-mono)',
+                  textTransform: 'uppercase',
+                  boxShadow: '2px 2px 0px var(--line)',
+                }}
+              >
+                <SpinnerGap size={18} weight="bold" className="animate-spin" />
+                <span>Redirigiendo a tu panel...</span>
+              </div>
+            </div>
+          ) : mode === 'reset' && resetStep === 'success' ? (
             <div style={{ display: 'grid', gap: '16px', marginTop: '12px' }}>
               <button
                 type="button"
@@ -830,36 +892,38 @@ export function AuthForm() {
           )}
         </div>
 
-        <div className="auth-actions">
-          {mode === 'sign-in' ? (
-            <>
+        {!registrationSuccess ? (
+          <div className="auth-actions">
+            {mode === 'sign-in' ? (
+              <>
+                <p>
+                  ¿No tienes cuenta todavía?{' '}
+                  <button type="button" onClick={() => changeMode('sign-up')}>
+                    Crear una cuenta
+                  </button>
+                </p>
+                <p>
+                  ¿Olvidaste tu contraseña?{' '}
+                  <button type="button" onClick={() => changeMode('reset')}>
+                    Recuperar acceso
+                  </button>
+                </p>
+              </>
+            ) : mode === 'sign-up' ? (
               <p>
-                ¿No tienes cuenta todavía?{' '}
-                <button type="button" onClick={() => changeMode('sign-up')}>
-                  Crear una cuenta
+                ¿Ya tienes cuenta?{' '}
+                <button type="button" onClick={() => changeMode('sign-in')}>
+                  Iniciar sesión
                 </button>
               </p>
-              <p>
-                ¿Olvidaste tu contraseña?{' '}
-                <button type="button" onClick={() => changeMode('reset')}>
-                  Recuperar acceso
-                </button>
-              </p>
-            </>
-          ) : mode === 'sign-up' ? (
-            <p>
-              ¿Ya tienes cuenta?{' '}
-              <button type="button" onClick={() => changeMode('sign-in')}>
-                Iniciar sesión
+            ) : (
+              <button type="button" className="auth-back" onClick={() => changeMode('sign-in')}>
+                <ArrowLeft size={16} weight="bold" />
+                <span>Volver a iniciar sesión</span>
               </button>
-            </p>
-          ) : (
-            <button type="button" className="auth-back" onClick={() => changeMode('sign-in')}>
-              <ArrowLeft size={16} weight="bold" />
-              <span>Volver a iniciar sesión</span>
-            </button>
-          )}
-        </div>
+            )}
+          </div>
+        ) : null}
 
         <div style={{ marginTop: '28px', paddingTop: '20px', borderTop: '1px solid var(--line)', textAlign: 'center', width: '100%', maxWidth: '380px' }}>
           <p style={{ font: '800 11px var(--font-mono)', color: 'var(--muted)', margin: '0 0 6px', textTransform: 'uppercase' }}>
