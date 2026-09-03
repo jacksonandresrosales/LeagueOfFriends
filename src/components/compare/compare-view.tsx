@@ -51,59 +51,54 @@ interface PlayerStats {
   summonerLevel?: number;
 }
 
-const mockDemoRival: PlayerStats = {
-  displayName: 'Kuro',
-  tagLine: '#EUW',
-  tier: 'PLATINUM',
-  division: 'III',
-  lp: 78,
-  wins: 19,
-  losses: 11,
-  totalGames: 30,
-  winRate: 63,
-  topChampionName: 'Yasuo',
-  topChampionPoints: 642000,
-  hasRiotAccount: true,
-  profileIconUrl: 'https://ddragon.leagueoflegends.com/cdn/15.4.1/img/profileicon/3554.png',
-  splashArtUrl: 'https://ddragon.leagueoflegends.com/cdn/img/champion/splash/Yasuo_0.jpg',
-  summonerLevel: 312,
+const defaultEmptyRival: PlayerStats = {
+  displayName: 'Sin Invocador',
+  tagLine: '#LAN',
+  tier: 'UNRANKED',
+  division: '',
+  lp: 0,
+  wins: 0,
+  losses: 0,
+  totalGames: 0,
+  winRate: 0,
+  hasRiotAccount: false,
 };
 
 const periodChartData: Record<Period, { playerPath: string; rivalPath: string; playerPoints: number; rivalPoints: number; dates: string[] }> = {
   Día: {
-    playerPoints: 5,
-    rivalPoints: 12,
-    playerPath: 'M0 176 C54 158 74 174 126 137 S211 121 263 88 S358 101 420 46 S511 58 570 24',
-    rivalPath: 'M0 185 C59 177 83 144 141 151 S230 115 287 124 S374 78 428 91 S516 64 570 73',
+    playerPoints: 0,
+    rivalPoints: 0,
+    playerPath: 'M0 188 C54 188 74 188 126 188 S211 188 263 188 S358 188 420 188 S511 188 570 188',
+    rivalPath: 'M0 188 C59 188 83 188 141 188 S230 188 287 188 S374 188 428 188 S516 188 570 188',
     dates: ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00', '23:59'],
   },
   Semana: {
-    playerPoints: 5,
-    rivalPoints: 78,
-    playerPath: 'M0 181 C46 170 80 188 127 148 S210 126 264 93 S355 110 419 52 S510 63 570 25',
-    rivalPath: 'M0 190 C49 181 89 146 142 158 S229 118 286 130 S372 83 429 97 S515 70 570 78',
+    playerPoints: 0,
+    rivalPoints: 0,
+    playerPath: 'M0 188 C46 188 80 188 127 188 S210 188 264 188 S355 188 419 188 S510 188 570 188',
+    rivalPath: 'M0 188 C49 188 89 188 142 188 S229 188 286 188 S372 188 429 188 S515 188 570 188',
     dates: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'],
   },
   Mes: {
-    playerPoints: 5,
-    rivalPoints: 140,
-    playerPath: 'M0 190 C52 179 74 160 127 171 S215 118 267 126 S355 69 421 80 S511 39 570 20',
-    rivalPath: 'M0 183 C56 151 85 175 143 140 S233 150 289 104 S376 120 431 86 S516 101 570 65',
+    playerPoints: 0,
+    rivalPoints: 0,
+    playerPath: 'M0 188 C52 188 74 188 127 188 S215 188 267 188 S355 188 421 188 S511 188 570 188',
+    rivalPath: 'M0 188 C56 188 85 188 143 188 S233 188 289 188 S376 188 431 188 S516 188 570 188',
     dates: ['Sem 1', 'Sem 2', 'Sem 3', 'Sem 4'],
   },
 };
 
 export function CompareView() {
   const searchParams = useSearchParams();
-  const urlFriendId = searchParams.get('friendId');
+  const urlFriendId = searchParams.get('friendId') || searchParams.get('rival');
 
   const [period, setPeriod] = useState<Period>('Semana');
   const [currentUserStats, setCurrentUserStats] = useState<PlayerStats | null>(null);
   const [friendsList, setFriendsList] = useState<FriendOption[]>([]);
-  const [selectedFriendId, setSelectedFriendId] = useState<string>(urlFriendId || 'demo');
-  const [rivalStats, setRivalStats] = useState<PlayerStats>(mockDemoRival);
+  const [selectedFriendId, setSelectedFriendId] = useState<string>(urlFriendId || '');
+  const [rivalStats, setRivalStats] = useState<PlayerStats>(defaultEmptyRival);
 
-  // Cargar datos del usuario logueado y lista de amigos
+  // Cargar datos del usuario logueado y lista de amigos reales
   useEffect(() => {
     let isMounted = true;
 
@@ -124,18 +119,15 @@ export function CompareView() {
         .eq('is_primary', true)
         .maybeSingle();
 
-      let snap: RankedSnapshotRow | null = null;
-      if (riotAccount) {
-        const { data: snapData } = await supabase
-          .from('ranked_snapshots')
-          .select('*')
-          .eq('riot_account_id', riotAccount.id)
-          .order('captured_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        snap = snapData;
-      }
+      const { data: snap } = riotAccount
+        ? await supabase
+            .from('ranked_snapshots')
+            .select('*')
+            .eq('riot_account_id', riotAccount.id)
+            .order('captured_at', { ascending: false })
+            .limit(1)
+            .maybeSingle()
+        : { data: null };
 
       // 2. Cargar resumen enriquecido de Riot (banner, icono, nivel)
       let topChampName: string | undefined;
@@ -190,38 +182,23 @@ export function CompareView() {
         });
       }
 
-      // 3. Cargar amigos aceptados
-      const { data: friendships } = await supabase
-        .from('friendships')
-        .select(`
-          id,
-          status,
-          requester_id,
-          addressee_id,
-          requester:profiles!friendships_requester_id_fkey(id, display_name, avatar_url),
-          addressee:profiles!friendships_addressee_id_fkey(id, display_name, avatar_url)
-        `)
-        .eq('status', 'accepted')
-        .or(`requester_id.eq.${userId},addressee_id.eq.${userId}`);
+      // 3. Cargar todos los demás perfiles registrados en la base de datos
+      const { data: allProfiles } = await supabase
+        .from('profiles')
+        .select('id, display_name')
+        .neq('id', userId);
 
-      const friends: FriendOption[] = [];
-
-      for (const f of friendships || []) {
-        const isSender = f.requester_id === userId;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const friendProfile = isSender ? (f.addressee as any) : (f.requester as any);
-        if (friendProfile) {
-          friends.push({
-            id: friendProfile.id,
-            displayName: friendProfile.display_name,
-          });
-        }
-      }
+      const rivals: FriendOption[] = (allProfiles || []).map((p) => ({
+        id: p.id,
+        displayName: p.display_name,
+      }));
 
       if (isMounted) {
-        setFriendsList(friends);
-        if (urlFriendId && friends.some((f) => f.id === urlFriendId)) {
+        setFriendsList(rivals);
+        if (urlFriendId && rivals.some((f) => f.id === urlFriendId)) {
           setSelectedFriendId(urlFriendId);
+        } else if (rivals.length > 0) {
+          setSelectedFriendId(rivals[0].id);
         }
       }
     }
@@ -233,31 +210,31 @@ export function CompareView() {
     };
   }, [urlFriendId]);
 
-  // Cargar datos dinámicos del rival cuando cambia selectedFriendId
+  // Cargar datos dinámicos del rival real cuando cambia selectedFriendId
   useEffect(() => {
     let isMounted = true;
 
     async function loadRivalData() {
-      if (selectedFriendId === 'demo') {
-        if (isMounted) setRivalStats(mockDemoRival);
+      if (!selectedFriendId) {
+        if (isMounted) setRivalStats(defaultEmptyRival);
         return;
       }
 
       const supabase = getSupabaseClient();
 
-      // Cargar perfil del amigo
+      // Cargar perfil del rival
       const { data: friendProfile } = await supabase
         .from('profiles')
-        .select('id, display_name')
+        .select('id, display_name, avatar_url')
         .eq('id', selectedFriendId)
         .maybeSingle();
 
       if (!friendProfile) {
-        if (isMounted) setRivalStats(mockDemoRival);
+        if (isMounted) setRivalStats(defaultEmptyRival);
         return;
       }
 
-      // Cargar cuenta de Riot del amigo
+      // Cargar cuenta de Riot del rival
       const { data: riotAccount } = await supabase
         .from('riot_accounts')
         .select('*')
@@ -382,7 +359,9 @@ export function CompareView() {
                 cursor: 'pointer',
               }}
             >
-              <option value="demo">Kuro #EUW (Rival Demo)</option>
+              {friendsList.length === 0 ? (
+                <option value="">No hay otros usuarios registrados</option>
+              ) : null}
               {friendsList.map((f) => (
                 <option key={f.id} value={f.id}>
                   {f.displayName}

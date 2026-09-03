@@ -265,36 +265,33 @@ export function CreateChallenge() {
         const friend = friendsList.find((f) => f.id === friendId);
         if (!friend) continue;
 
-        // Si es un amigo registrado en base de datos
-        if (!friendId.endsWith('-mock')) {
-          if (friend.riotAccountId) {
-            await supabase.from('challenge_participants').insert({
-              challenge_id: newChallenge.id,
-              profile_id: friend.id,
-              riot_account_id: friend.riotAccountId,
-              role: 'participant',
-              status: 'invited',
-              baseline_value: 0,
-              current_value: 0,
-            });
-          }
-
-          // Crear notificación en Supabase para el rival
-          await supabase.from('notifications').insert({
-            profile_id: friend.id,
-            type: 'challenge_invite',
+        if (friend.riotAccountId) {
+          await supabase.from('challenge_participants').insert({
             challenge_id: newChallenge.id,
-            deduplication_key: `challenge-invite-${newChallenge.id}-${friend.id}`,
-            payload: {
-              title: 'Nuevo Reto Recibido',
-              message: `¡Te han desafiado al reto '${challengeName.trim()}'!`,
-              actor_name: myRiotAccount?.game_name || 'Tu amigo',
-              actor_tag: myRiotAccount ? `#${myRiotAccount.tag_line}` : '#LAN',
-              actor_avatar: 'https://ddragon.leagueoflegends.com/cdn/15.4.1/img/profileicon/5466.png',
-              link: `/retos?challengeId=${newChallenge.id}`,
-            },
+            profile_id: friend.id,
+            riot_account_id: friend.riotAccountId,
+            role: 'participant',
+            status: 'invited',
+            baseline_value: 0,
+            current_value: 0,
           });
         }
+
+        // Crear notificación en Supabase para el rival
+        await supabase.from('notifications').insert({
+          profile_id: friend.id,
+          type: 'challenge_invite',
+          challenge_id: newChallenge.id,
+          deduplication_key: `challenge-invite-${newChallenge.id}-${friend.id}`,
+          payload: {
+            title: 'Nuevo Reto Recibido',
+            message: `¡Te han desafiado al reto '${challengeName.trim()}'!`,
+            actor_name: myRiotAccount?.game_name || 'Tu amigo',
+            actor_tag: myRiotAccount ? `#${myRiotAccount.tag_line}` : '#LAN',
+            actor_avatar: 'https://ddragon.leagueoflegends.com/cdn/15.4.1/img/profileicon/5466.png',
+            link: `/retos?challengeId=${newChallenge.id}`,
+          },
+        });
       }
 
       setSuccessMsg('¡Reto creado con éxito! Redirigiendo a la lista de retos...');
