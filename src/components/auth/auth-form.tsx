@@ -356,57 +356,47 @@ export function AuthForm() {
           return;
         }
 
-        // Comprobación rápida de respaldo
-        try {
-          const checkRes = await fetch('/api/auth/check-email', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email }),
-          });
-          const checkData = await checkRes.json();
-          if (checkData.exists) {
-            setEmailCheckStatus('registered');
-            setError('Este correo ya está registrado. Inicia sesión para continuar.');
-            setSubmitting(false);
-            return;
-          }
-        } catch {
-          // Continuar con Supabase
-        }
-
-        const { error: signUpError } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: {
-              displayName: safeDisplayName,
-            },
-            emailRedirectTo: `${window.location.origin}/auth/callback`,
-          },
+        // 2. REGISTRO DIRECTO A TRAVÉS DE NUESTRA API SEGURA
+        const regRes = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email,
+            password,
+            displayName: safeDisplayName,
+          }),
         });
 
-        if (signUpError) {
-          if (
-            signUpError.message?.toLowerCase().includes('already registered') ||
-            signUpError.message?.toLowerCase().includes('user already exists')
-          ) {
-            setEmailCheckStatus('registered');
-            setError('Este correo ya está registrado. Inicia sesión para continuar.');
-            setSubmitting(false);
-            return;
-          }
-          throw signUpError;
+        const regData = await regRes.json();
+
+        if (!regRes.ok || !regData.success) {
+          setError(regData.error || 'No fue posible crear la cuenta. Inténtalo de nuevo.');
+          setSubmitting(false);
+          return;
         }
 
-        // Desconectamos cualquier sesión automática inmediata para forzar inicio de sesión manual
-        await supabase.auth.signOut({ scope: 'local' });
-        setInputEmail(email);
-        setMode('sign-in');
-        setShowPassword(false);
-        setShowConfirmation(false);
-        setEmailCheckStatus('idle');
-        setMessage('¡Cuenta creada con éxito! Ahora inicia sesión con tu correo y contraseña.');
-        setSubmitting(false);
+        // Iniciar sesión automáticamente
+        const { error: autoSignInError } = await supabase.auth.signInWithPassword({ email, password });
+        if (autoSignInError) {
+          setInputEmail(email);
+          setMode('sign-in');
+          setShowPassword(false);
+          setShowConfirmation(false);
+          setEmailCheckStatus('idle');
+          setMessage('¡Cuenta creada con éxito! Ahora inicia sesión con tu correo y contraseña.');
+          setSubmitting(false);
+          return;
+        }
+
+        try {
+          if (rememberMe) {
+            localStorage.setItem('lof_remembered_email', email);
+          }
+        } catch {
+          // Fallback silencioso
+        }
+
+        router.replace('/');
         return;
       }
 
