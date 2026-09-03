@@ -47,85 +47,6 @@ interface RankedEntry {
   isFriend?: boolean;
 }
 
-const mockCommunityPlayers: RankedEntry[] = [
-  {
-    id: 'comm-1',
-    isCurrentUser: false,
-    displayName: 'Vortex',
-    tagLine: '#LAN',
-    tier: 'DIAMOND',
-    division: 'II',
-    lp: 64,
-    wins: 58,
-    losses: 32,
-    totalGames: 90,
-    winRate: 64,
-    topChampionName: 'Zed',
-    topChampionPoints: 850000,
-    profileIconUrl: 'https://ddragon.leagueoflegends.com/cdn/15.4.1/img/profileicon/5122.png',
-    splashArtUrl: 'https://ddragon.leagueoflegends.com/cdn/img/champion/splash/Zed_0.jpg',
-    summonerLevel: 512,
-    hasRiotAccount: true,
-  },
-  {
-    id: 'comm-2',
-    isCurrentUser: false,
-    displayName: 'Kuro',
-    tagLine: '#EUW',
-    tier: 'PLATINUM',
-    division: 'III',
-    lp: 78,
-    wins: 19,
-    losses: 11,
-    totalGames: 30,
-    winRate: 63,
-    topChampionName: 'Yasuo',
-    topChampionPoints: 642000,
-    profileIconUrl: 'https://ddragon.leagueoflegends.com/cdn/15.4.1/img/profileicon/3554.png',
-    splashArtUrl: 'https://ddragon.leagueoflegends.com/cdn/img/champion/splash/Yasuo_0.jpg',
-    summonerLevel: 312,
-    hasRiotAccount: true,
-  },
-  {
-    id: 'comm-3',
-    isCurrentUser: false,
-    displayName: 'Aegis',
-    tagLine: '#LAS',
-    tier: 'EMERALD',
-    division: 'IV',
-    lp: 42,
-    wins: 45,
-    losses: 33,
-    totalGames: 78,
-    winRate: 58,
-    topChampionName: 'Thresh',
-    topChampionPoints: 490000,
-    profileIconUrl: 'https://ddragon.leagueoflegends.com/cdn/15.4.1/img/profileicon/4405.png',
-    splashArtUrl: 'https://ddragon.leagueoflegends.com/cdn/img/champion/splash/Thresh_0.jpg',
-    summonerLevel: 288,
-    hasRiotAccount: true,
-  },
-  {
-    id: 'comm-4',
-    isCurrentUser: false,
-    displayName: 'Solari',
-    tagLine: '#LAN',
-    tier: 'GOLD',
-    division: 'I',
-    lp: 88,
-    wins: 34,
-    losses: 26,
-    totalGames: 60,
-    winRate: 57,
-    topChampionName: 'Leona',
-    topChampionPoints: 310000,
-    profileIconUrl: 'https://ddragon.leagueoflegends.com/cdn/15.4.1/img/profileicon/1630.png',
-    splashArtUrl: 'https://ddragon.leagueoflegends.com/cdn/img/champion/splash/Leona_0.jpg',
-    summonerLevel: 195,
-    hasRiotAccount: true,
-  },
-];
-
 const tierRankValues: Record<string, number> = {
   CHALLENGER: 9000,
   GRANDMASTER: 8000,
@@ -161,7 +82,7 @@ export function LeaderboardView() {
 
   const [players, setPlayers] = useState<RankedEntry[]>([]);
 
-  // Cargar datos reales del usuario logueado y sus amigos
+  // Cargar exclusivamente datos reales de la base de datos y Riot Games
   useEffect(() => {
     let isMounted = true;
 
@@ -174,22 +95,22 @@ export function LeaderboardView() {
       if (userData?.user) {
         const userId = userData.user.id;
 
-        // 1. Cargar datos del usuario actual
+        // 1. Cargar resumen enriquecido del usuario actual (Riot)
         const { data: profile } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle();
-        const { data: riotAccount } = await supabase
+        const { data: myRiot } = await supabase
           .from('riot_accounts')
           .select('*')
           .eq('profile_id', userId)
           .eq('is_primary', true)
           .maybeSingle();
 
-        let topChampName: string | undefined;
-        let topChampPoints: number | undefined;
-        let profileIconUrl: string | undefined;
-        let splashArtUrl: string | undefined;
-        let summonerLevel: number | undefined;
+        let myTopChampName: string | undefined;
+        let myTopChampPoints: number | undefined;
+        let myProfileIconUrl: string | undefined;
+        let mySplashArtUrl: string | undefined;
+        let mySummonerLevel: number | undefined;
 
-        if (riotAccount) {
+        if (myRiot) {
           try {
             const { data: sessionData } = await supabase.auth.getSession();
             const token = sessionData.session?.access_token;
@@ -199,11 +120,11 @@ export function LeaderboardView() {
               });
               if (res.ok) {
                 const s = await res.json();
-                topChampName = s.topChampion?.name;
-                topChampPoints = s.topChampion?.points;
-                profileIconUrl = s.profileIconUrl;
-                splashArtUrl = s.splashArtUrl;
-                summonerLevel = s.summonerLevel;
+                myTopChampName = s.topChampion?.name;
+                myTopChampPoints = s.topChampion?.points;
+                myProfileIconUrl = s.profileIconUrl;
+                mySplashArtUrl = s.splashArtUrl;
+                mySummonerLevel = s.summonerLevel;
               }
             }
           } catch {
@@ -211,119 +132,91 @@ export function LeaderboardView() {
           }
         }
 
-        const { data: snap } = riotAccount
-          ? await supabase
-              .from('ranked_snapshots')
-              .select('*')
-              .eq('riot_account_id', riotAccount.id)
-              .order('captured_at', { ascending: false })
-              .limit(1)
-              .maybeSingle()
-          : { data: null };
-
-        const wins = snap?.wins ?? 6;
-        const losses = snap?.losses ?? 6;
-        const total = wins + losses;
-
-        entries.push({
-          id: userId,
-          isCurrentUser: true,
-          displayName: riotAccount?.game_name || profile?.display_name || 'Tú',
-          tagLine: riotAccount ? `#${riotAccount.tag_line}` : '#LAN',
-          tier: snap?.tier || 'BRONZE',
-          division: snap?.division || 'I',
-          lp: snap?.league_points ?? 5,
-          wins,
-          losses,
-          totalGames: total,
-          winRate: total > 0 ? Math.round((wins / total) * 100) : 50,
-          topChampionName: topChampName || 'Vayne',
-          topChampionPoints: topChampPoints || 1011719,
-          profileIconUrl: profileIconUrl || 'https://ddragon.leagueoflegends.com/cdn/15.4.1/img/profileicon/5466.png',
-          splashArtUrl: splashArtUrl || 'https://ddragon.leagueoflegends.com/cdn/img/champion/splash/Vayne_0.jpg',
-          summonerLevel: summonerLevel || 423,
-          hasRiotAccount: !!riotAccount,
-        });
-
-        // 2. Cargar amigos de Supabase
+        // 2. Cargar amigos aceptados del usuario actual
         const { data: friendships } = await supabase
           .from('friendships')
-          .select(`
-            requester_id,
-            addressee_id,
-            requester:profiles!friendships_requester_id_fkey(id, display_name, avatar_url),
-            addressee:profiles!friendships_addressee_id_fkey(id, display_name, avatar_url)
-          `)
+          .select('requester_id, addressee_id')
           .eq('status', 'accepted')
           .or(`requester_id.eq.${userId},addressee_id.eq.${userId}`);
 
+        const friendIds = new Set<string>();
         for (const f of friendships || []) {
-          const isSender = f.requester_id === userId;
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const friendProfile = isSender ? (f.addressee as any) : (f.requester as any);
-          if (!friendProfile) continue;
+          friendIds.add(f.requester_id === userId ? f.addressee_id : f.requester_id);
+        }
 
-          const { data: friendRiot } = await supabase
-            .from('riot_accounts')
-            .select('*')
-            .eq('profile_id', friendProfile.id)
-            .eq('is_primary', true)
-            .maybeSingle();
+        // 3. Cargar todos los perfiles reales registrados en la base de datos
+        const { data: allProfiles } = await supabase
+          .from('profiles')
+          .select('id, display_name, avatar_url');
 
-          let fWins = 0;
-          let fLosses = 0;
-          let fTier = 'UNRANKED';
-          let fDivision = '';
-          let fLp = 0;
+        // 4. Cargar todas las cuentas Riot principales vinculadas
+        const { data: allRiotAccounts } = await supabase
+          .from('riot_accounts')
+          .select('id, profile_id, game_name, tag_line, platform_route')
+          .eq('is_primary', true);
 
-          if (friendRiot) {
-            const { data: fSnap } = await supabase
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const riotMap = new Map<string, any>((allRiotAccounts || []).map((r) => [r.profile_id, r]));
+
+        // 5. Cargar los últimos snapshots reales de ranked
+        const riotAccountIds = (allRiotAccounts || []).map((r) => r.id);
+        const { data: allSnapshots } = riotAccountIds.length > 0
+          ? await supabase
               .from('ranked_snapshots')
               .select('*')
-              .eq('riot_account_id', friendRiot.id)
+              .in('riot_account_id', riotAccountIds)
               .order('captured_at', { ascending: false })
-              .limit(1)
-              .maybeSingle();
+          : { data: [] };
 
-            if (fSnap) {
-              fWins = fSnap.wins;
-              fLosses = fSnap.losses;
-              fTier = fSnap.tier;
-              fDivision = fSnap.division;
-              fLp = fSnap.league_points;
-            }
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const snapMap = new Map<number, any>();
+        for (const s of allSnapshots || []) {
+          if (!snapMap.has(s.riot_account_id)) {
+            snapMap.set(s.riot_account_id, s);
           }
+        }
 
-          const fTotal = fWins + fLosses;
+        // 6. Construir la lista 100% con usuarios reales
+        for (const prof of allProfiles || []) {
+          const isCurrentUser = prof.id === userId;
+          const isFriend = friendIds.has(prof.id);
+          const riot = isCurrentUser ? myRiot : riotMap.get(prof.id);
+          const snap = riot ? snapMap.get(riot.id) : null;
+
+          const wins = snap?.wins ?? 0;
+          const losses = snap?.losses ?? 0;
+          const total = wins + losses;
+          const winRate = total > 0 ? Math.round((wins / total) * 100) : 0;
 
           entries.push({
-            id: friendProfile.id,
-            isCurrentUser: false,
-            displayName: friendRiot?.game_name || friendProfile.display_name,
-            tagLine: friendRiot ? `#${friendRiot.tag_line}` : '#LAN',
-            tier: fTier,
-            division: fDivision,
-            lp: fLp,
-            wins: fWins,
-            losses: fLosses,
-            totalGames: fTotal,
-            winRate: fTotal > 0 ? Math.round((fWins / fTotal) * 100) : 0,
-            hasRiotAccount: !!friendRiot,
-            isFriend: true,
+            id: prof.id,
+            isCurrentUser,
+            displayName: isCurrentUser
+              ? (myRiot?.game_name || profile?.display_name || prof.display_name || 'Tú')
+              : (riot?.game_name || prof.display_name || 'Invocador'),
+            tagLine: isCurrentUser
+              ? (myRiot ? `#${myRiot.tag_line}` : '#LAN')
+              : (riot ? `#${riot.tag_line}` : '#LAN'),
+            tier: snap?.tier || 'UNRANKED',
+            division: snap?.division || '',
+            lp: snap?.league_points ?? 0,
+            wins,
+            losses,
+            totalGames: total,
+            winRate,
+            topChampionName: isCurrentUser ? myTopChampName : undefined,
+            topChampionPoints: isCurrentUser ? myTopChampPoints : undefined,
+            profileIconUrl: isCurrentUser ? myProfileIconUrl : prof.avatar_url || undefined,
+            splashArtUrl: isCurrentUser ? mySplashArtUrl : undefined,
+            summonerLevel: isCurrentUser ? mySummonerLevel : undefined,
+            hasRiotAccount: isCurrentUser ? !!myRiot : !!riot,
+            isFriend,
           });
         }
       }
 
-      // 3. Añadir jugadores de la comunidad si faltan participantes
-      const combined = [...entries];
-      for (const cp of mockCommunityPlayers) {
-        if (!combined.some((e) => e.displayName.toLowerCase() === cp.displayName.toLowerCase())) {
-          combined.push({ ...cp, isFriend: false });
-        }
-      }
-
       if (isMounted) {
-        setPlayers(combined);
+        setPlayers(entries);
       }
     }
 
@@ -831,21 +724,34 @@ export function LeaderboardView() {
                 </tr>
               </thead>
               <tbody>
-                {filteredAndSortedPlayers.map((player, idx) => {
-                  const rankNumber = idx + 1;
-                  const isTop1 = rankNumber === 1;
-                  const isTop2 = rankNumber === 2;
-                  const isTop3 = rankNumber === 3;
+                {filteredAndSortedPlayers.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} style={{ padding: '48px 24px', textAlign: 'center', color: 'var(--muted)' }}>
+                      <Trophy size={40} weight="duotone" style={{ margin: '0 auto 12px', display: 'block', opacity: 0.4 }} />
+                      <strong style={{ display: 'block', font: '900 16px/1.2 var(--font-display)', textTransform: 'uppercase', color: 'var(--ink)', marginBottom: '6px' }}>
+                        No hay invocadores registrados para este filtro
+                      </strong>
+                      <p style={{ margin: 0, font: '700 12px var(--font-mono)' }}>
+                        {scope === 'friends' ? 'Añade amigos en la sección Amigos para verlos aquí.' : 'Los jugadores aparecerán aquí conforme se registren y vinculen su Riot ID.'}
+                      </p>
+                    </td>
+                  </tr>
+                ) : (
+                  filteredAndSortedPlayers.map((player, idx) => {
+                    const rankNumber = idx + 1;
+                    const isTop1 = rankNumber === 1;
+                    const isTop2 = rankNumber === 2;
+                    const isTop3 = rankNumber === 3;
 
-                  return (
-                    <tr
-                      key={player.id}
-                      style={{
-                        borderBottom: '2px solid var(--line)',
-                        background: player.isCurrentUser ? 'color-mix(in oklch, var(--accent) 12%, var(--surface))' : 'transparent',
-                        transition: 'background-color 140ms ease',
-                      }}
-                    >
+                    return (
+                      <tr
+                        key={player.id}
+                        style={{
+                          borderBottom: '2px solid var(--line)',
+                          background: player.isCurrentUser ? 'color-mix(in oklch, var(--accent) 12%, var(--surface))' : 'transparent',
+                          transition: 'background-color 140ms ease',
+                        }}
+                      >
                       {/* Posición */}
                       <td style={{ padding: '16px', textAlign: 'center' }}>
                         <span
@@ -1004,7 +910,7 @@ export function LeaderboardView() {
                       </td>
                     </tr>
                   );
-                })}
+                }))}
               </tbody>
             </table>
           </div>
